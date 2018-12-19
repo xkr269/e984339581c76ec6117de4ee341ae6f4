@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>MapR Distributed Image Processing</title>
+  </head>
+  <body>
+    <img src="{{url_for('static', filename='mapr-logo.png')}}" align="middle" height="100"/>
+    <h1>Distributed Image Processing</h1>
+    <table style="width:100%">
+    <tr>
+      <th width="33%">Source</th>
+      <th width="33%">Resized</th>
+      <th width="33%">Analyzed</th>
+    </tr>
+    <tr>
+      <th>drone1:frames</th>
+      <th>drone1:resized</th>
+      <th>drone1:analyzed</th>
+    </tr>
+    <tr>
+      <td><img src="video_feed_frames" width="300px"></td>
+      <td><img src="video_feed_resized" width="200px"></td>
+      <td><img src="video_feed_analyzed" width="200px"></td>
+    </tr>
+  </table>
+  </body>
+</html>
