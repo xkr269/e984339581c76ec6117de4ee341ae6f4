@@ -34,4 +34,4 @@ COPY people_1.jpg /home/mapr/
 COPY people_2.jpg /home/mapr/
 COPY people_3.jpg /home/mapr/
 RUN sudo chmod +x /home/mapr/startup.sh
-# CMD /home/mapr/startup.sh
+CMD /home/mapr/startup.sh
