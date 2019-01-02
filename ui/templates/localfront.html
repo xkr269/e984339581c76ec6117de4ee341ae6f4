@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
+    <link rel="stylesheet" href="{{url_for('static', filename='localfront.css')}}">
+
+    <title>{{country}} Edge</title>
+  </head>
+  <body>
+    <div class="row" id="top_image" style="width:100%">
+      <img src="{{url_for('static', filename='header.png')}}" class="img-fluid" style="width:100%;height:120px" alt="Responsive image">
+      <div class="country_name">{{country}}</div>
+    </div>
+    <div class="row p-2">
+      <div class="col-md-4"></div>
+      <div class="col-md-4">
+         New city  <input type="text" id="new_city">
+        <button id="deploy_new_city_btn" class="btn btn-danger btn-sm">Deploy</button>
+      </div>
+    </div>
+    <hr>
+    <div id="charts" class="row p-5"></div>
+
+    <script type="text/javascript" src="{{url_for('static', filename='jquery-3.3.1.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='popper.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='bootstrap.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='highcharts.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='exporting.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='localfront.js')}}"></script>
+
+    <script>
+
+      $( document ).ready(function() {
+          update_cities();
+          update_charts();
+      });
+
+      $("#deploy_new_city_btn").click(function(){
+          var new_city = $("#new_city").val();
+          console.log("deploying new city : " + new_city);
+          $("#deploy_new_city_btn").text("Deploying ...");
+
+          $.ajax({
+              url: 'deploy_new_city',
+              type: 'post',
+              data: {"city":new_city},
+              success:function(data){
+                  console.log(data);
+                  test_city(new_city);
+              }
+          });
+      })
+
+      function test_city(city){
+        if($("#"+city).length){
+          $("#new_city").val("");
+          $("#deploy_new_city_btn").text("Deploy");
+        }else{
+          setTimeout(function(){
+            test_city(city);
+          }, 1000 * 1);
+        }
+      }
+
+      function remove_country(){   
+        $.ajax({
+            url: 'remove_country',
+            type: 'post',
+            data: {"country":{{country}}},
+            success:function(data){
+                console.log(data);
+            }
+        });
+    }
+
+
+    </script>
+
+  </body>
+</html>
