@@ -1,8 +1,13 @@
 #! /usr/bin/python
 
 import logging
+import os
+import json
+
 from flask import Flask, render_template, request
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
+from confluent_kafka import Producer 
+
 
 logging.basicConfig(filename='logs/ui.log',level=logging.DEBUG)
 
@@ -12,8 +17,18 @@ with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     cluster_name = first_line.split(' ')[0]
     logging.debug('Cluster name : {}'.format(cluster_name))
 
-POSITIONS_TABLE_PATH = '/mapr/' + cluster_name + '/positions'  # Path for the table that stores positions information
+POSITIONS_TABLE_PATH = '/mapr/' + cluster_name + '/positions_table'  # Path for the table that stores positions information
+POSITIONS_STREAM_PATH = '/mapr/' + cluster_name + '/positions_stream'   # Positions stream path
 
+
+# Configure positions stream
+if not os.path.islink(POSITIONS_STREAM_PATH):
+    logging.debug("creating stream {}".format(POSITIONS_STREAM_PATH))
+    os.system('maprcli stream create -path ' + POSITIONS_STREAM_PATH + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+    logging.debug("stream created")
+
+logging.debug("creating producer for {}".format(POSITIONS_STREAM_PATH))
+p = Producer({'streams.producer.default.stream': POSITIONS_STREAM_PATH})
 
 # Create connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -41,6 +56,9 @@ def update_drone_position():
     from_zone = "unpositionned"
 
   positions.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
+
+  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone}
+  p.produce("positions", json.dumps(message))
 
   return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
 
