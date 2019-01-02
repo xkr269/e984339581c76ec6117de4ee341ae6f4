@@ -1,3 +1,37 @@
+
+
+$(function(){
+
+    $('.drag').draggable({revert:"invalid",revertDuration: 300}); // appel du plugin
+
+});
+
+
+$('.drop').droppable({
+  drop : function(e,ui){
+        var drop_zone = $(this).attr('id');
+        var drone_id = ui.draggable.attr('id');
+        $.ajax({
+            url: 'update_drone_position',
+            type: 'post',
+            data: {"drone_id":drone_id,"drop_zone":drop_zone},
+            success:function(data){
+                console.log(data)
+            }
+        });
+    }
+}); 
+
+$( document ).ready(function(){
+/*  display_streams();
+  display_countries();
+  update_country_charts();*/
+});
+
+
+
+
+
 var active_streams = [];
 var deployed_countries = [];
 
@@ -12,20 +46,6 @@ function contains(array,string){
     }
     return in_array;
 }
-
-$('.drop').droppable({
-  drop : function(e){
-        var zone = $(this).attr('id');
-        $.ajax({
-            url: 'deploy_new_country',
-            type: 'post',
-            data: {"country":zone},
-            success:function(data){
-                $("#"+zone+"_docker_image").show();
-            }
-        });
-    }
-}); // ce bloc servira de zone de 
 
 
 $('#recycle').droppable({
@@ -44,12 +64,6 @@ $('#recycle').droppable({
     }
 }); // ce bloc servira de zone de dépôt
 
-
-$(function(){
-
-    $('.drag').draggable({revert:true,revertDuration: 0}); // appel du plugin
-
-});
 
 
 
@@ -236,8 +250,3 @@ $( ".show_chart" ).mouseout(function() {
 });
 
 
-$( document ).ready(function(){
-/*  display_streams();
-  display_countries();
-  update_country_charts();*/
-});

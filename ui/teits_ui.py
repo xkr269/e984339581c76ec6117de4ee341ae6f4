@@ -1,6 +1,25 @@
 #! /usr/bin/python
 
+import logging
 from flask import Flask, render_template, request
+from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
+
+logging.basicConfig(filename='logs/ui.log',level=logging.DEBUG)
+
+# Retrieves current cluster name
+with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+    first_line = f.readline()
+    cluster_name = first_line.split(' ')[0]
+    logging.debug('Cluster name : {}'.format(cluster_name))
+
+POSITIONS_TABLE_PATH = '/mapr/' + cluster_name + '/positions'  # Path for the table that stores positions information
+
+
+# Create connection
+connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
+connection = ConnectionFactory().get_connection(connection_str=connection_str)
+positions = connection.get_or_create_store(POSITIONS_TABLE_PATH)
+
 
 app = Flask(__name__)
 
@@ -8,11 +27,26 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-  return render_template('teits_ui.html')
+  return render_template("teits_ui.html")
+
+@app.route('/update_drone_position',methods=["POST"])
+def update_drone_position():
+
+  drone_id = request.form["drone_id"]
+  drop_zone = request.form["drop_zone"]
+
+  try:
+    from_zone = positions.find_by_id(drone_id)["zone"]
+  except:
+    from_zone = "unpositionned"
+
+  positions.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
+
+  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
 
 
 
-app.run(debug=False,host='0.0.0.0',port=80)
+app.run(debug=True,host='0.0.0.0',port=80)
 
 
 
@@ -30,15 +64,9 @@ app.run(debug=False,host='0.0.0.0',port=80)
 # import random
 # from confluent_kafka import Consumer, KafkaError
 # import maprdb
-# import logging
 
-# logging.basicConfig(filename='logs/globalfront.log',level=logging.DEBUG)
 
-# # Retrieves current cluster name
-# with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-#     first_line = f.readline()
-#     cluster_name = first_line.split(' ')[0]
-#     logging.debug('Cluster name : {}'.format(cluster_name))
+
 
 
 # # Global variables
