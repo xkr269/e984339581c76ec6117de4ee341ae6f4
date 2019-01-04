@@ -6,12 +6,8 @@ $(function(){
 
 });
 
-
-$('.drop').droppable({
-  drop : function(e,ui){
-        var drop_zone = $(this).attr('id');
-        var drone_id = ui.draggable.attr('id');
-        $.ajax({
+function set_drone_position(drone_id,drop_zone){
+    $.ajax({
             url: 'update_drone_position',
             type: 'post',
             data: {"drone_id":drone_id,"drop_zone":drop_zone},
@@ -19,8 +15,59 @@ $('.drop').droppable({
                 console.log(data)
             }
         });
-    }
+}
+
+function set_zone_position(zone_id,top,left){
+    $.ajax({
+            url: 'update_zone_position',
+            type: 'post',
+            data: {"zone_id":zone_id,"top":top,"left":left},
+            success:function(data){
+                console.log(data)
+            }
+        });
+}
+
+
+$('.drop.zone').droppable({
+    drop : function(e,ui){
+        var drop_zone = $(this).attr('id');
+        var drone_id = ui.draggable.attr('id');
+        set_position(drone_id,drop_zone);       
+    },
 }); 
+
+$('.drop.zone').click(function(e){
+    $('#drone_1').animate({
+            top : e.pageY - 35,
+            left: e.pageX - 44
+            }, 1000, function() {
+                var drop_zone = e.target.id;
+                var drone_id = "drone_1";
+                set_drone_position(drone_id,drop_zone);  
+            });
+});
+
+$('#main_map.drop').droppable({
+    drop : function(e,ui){
+        var zone_id = ui.draggable.attr('id');
+        var top = ui.draggable.offset().top;
+        var left = ui.draggable.offset().left;
+        set_zone_position(zone_id,top,left); 
+    },
+}); 
+
+$("#back_home_button").click(function(){
+        $('#drone_1').animate({
+            top : 70,
+            left: 930
+            }, 1000, function() {
+                var drop_zone = "home_base";
+                var drone_id = "drone_1";
+                set_position(drone_id,drop_zone);  
+            });
+})
+
 
 $( document ).ready(function(){
 /*  display_streams();

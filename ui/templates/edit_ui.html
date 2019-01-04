@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Eye In The Sky</title>
+  <link rel="stylesheet" href="{{url_for('static', filename='jquery-ui.css')}}">
+  <link rel="stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
+  <link rel="stylesheet" href="{{url_for('static', filename='teits.css')}}">
+</head>
+<body> 
+  <div class="row">
+    <div class="col-md-7 drop" id="main_map">
+      {% for zone in zones %}
+        <div class="border-visible drag zone"
+             id="{{zone._id}}" 
+             style="position: fixed; height:{{zone.height}}px;width: {{zone.width}}px; top:{{zone.top}}px;left:{{zone.left}}px">
+        </div>
+      {% endfor %}
+    </div>
+    <div class="col-md-5 align-middle">
+
+    <h4>Change Background image</h1>
+    <form method=post enctype=multipart/form-data>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+    <hr>
+    <h4>Add drop zone</h1>
+    <form method=post action="/add_zone">
+      name: <input type="text" name="name"><br>
+      width: <input type="text" name="width"><br>
+      height: <input type="text" name="height"><br>
+      <input type="submit" value="Add">
+    </form>
+    </div>
+  </div>
+
+
+  
+
+
+</body>
+
+  <script type="text/javascript" src="{{url_for('static', filename='jquery-1.12.4.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='jquery-ui.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='popper.min.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='bootstrap.min.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='highcharts.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='exporting.js')}}"></script>
+  <script type="text/javascript" src="{{url_for('static', filename='teits.js')}}"></script>
+</html>
