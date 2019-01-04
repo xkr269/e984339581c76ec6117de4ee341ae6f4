@@ -1,0 +1,228 @@
+body {
+    color:black;
+    background-image:url(paris.png);
+    background-repeat:no-repeat;
+}
+
+.border-visible {
+/*  border-color: black;
+  border-width: 1px;
+  border-style: solid;*/
+}
+
+#arcdetriomphe {
+  position: fixed;
+  top: 150px;
+  left: 200px;
+  width: 150px;
+  height: 90px;
+}
+
+
+#toureiffel {
+  position: fixed;
+  top: 250px;
+  left: 200px;
+  width: 150px;
+  height: 130px;
+}
+
+
+#montparnasse {
+  position: fixed;
+  top: 390px;
+  left: 275px;
+  width: 150px;
+  height: 130px;
+}
+
+#notredame {
+  position: fixed;
+  top: 250px;
+  left: 450px;
+  width: 140px;
+  height: 130px;
+}
+
+#sacrecoeur {
+  position: fixed;
+  top: 0px;
+  left: 430px;
+  width: 170px;
+  height: 150px;
+}
+
+
+#geode {
+  position: fixed;
+  top: 35px;
+  left: 640px;
+  width: 130px;
+  height: 100px;
+}
+
+#republique {
+  position: fixed;
+  top: 270px;
+  left: 610px;
+  width: 120px;
+  height: 130px;
+}
+
+
+#drone_1  {
+  position: fixed;
+  top: 50px;
+  left: 900px;
+  width: 88px;
+  height: 70px;
+  background-image: url(drone.png);
+  background-size: cover;
+}
+
+
+#drone_2  {
+  position: fixed;
+  top: 150px;
+  left: 900px;
+  width: 88px;
+  height: 70px;
+  background-image: url(drone.png);
+  background-size: cover;
+}
+
+
+/*
+
+#europe_docker_image  {
+  position: fixed;
+  top: 110px;
+  left: 620px;
+  width: 50px;
+  height: 50px;
+  display: none;
+  background-image: url(docker_image_green.png);
+  background-size: cover;
+}
+
+#north-america_docker_image  {
+  position: fixed;
+  top: 165px;
+  left: 195px;
+  width: 50px;
+  height: 50px;
+  display: none;
+  background-image: url(docker_image_green.png);
+  background-size: cover;
+}
+
+#australia_docker_image  {
+  position: fixed;
+  top: 450px;
+  left: 1025px;
+  width: 50px;
+  height: 50px;
+  display: none;
+  background-image: url(docker_image_green.png);
+  background-size: cover;
+}
+
+#recycle  {
+  position: fixed;
+  top: 520px;
+  left: 60px;
+  width: 70px;
+  height: 100px;
+}
+
+#north-america_streams  {
+  position: fixed;
+  top: 165px;
+  left: 255px;
+  width: 100px;
+  height: 40px;
+  display: none;
+  background-image: url(mapres.png);
+  background-size: cover;
+}
+
+#europe_streams  {
+  position: fixed;
+  top: 110px;
+  left: 680px;
+  width: 100px;
+  height: 40px;
+  display: none;
+  background-image: url(mapres.png);
+  background-size: cover;
+}
+
+#australia_streams  {
+  position: fixed;
+  top: 450px;
+  left: 914px;
+  width: 100px;
+  height: 40px;
+  display: none;
+  background-image: url(mapres.png);
+  background-size: cover;
+}
+
+#global_streams  {
+  position: fixed;
+  top: 350px;
+  left: 620px;
+  width: 100px;
+  height: 120px;
+  display: none;
+  background-image: url(mapres.png);
+}
+
+#replicate_streams  {
+  position: fixed;
+  font-size: 15px;
+  font-weight: bold;
+  top: 550px;
+  left: 500px;
+  width: 150px;
+  height: 50px;
+  display: none;
+}
+
+#global_charts  {
+  position: fixed;
+  top: 10px;
+  left: 1300px;
+  width: 400px;
+  height: 600px;
+}
+
+#north-america_charts  {
+  position: fixed;
+  top: 300px;
+  left: 20px;
+  width: 300px;
+  height: 200px;
+}
+
+#europe_charts  {
+  position: fixed;
+  top: 10px;
+  left: 780px;
+  width: 300px;
+  height: 200px;
+}
+
+#australia_charts  {
+  position: fixed;
+  top: 500px;
+  left: 725px;
+  width: 300px;
+  height: 200px;
+}
+
+.country_charts  {
+    display: none;
+}
+
+*/
