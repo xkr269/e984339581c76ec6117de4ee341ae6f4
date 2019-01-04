@@ -144,15 +144,22 @@ def edit():
 
   return render_template("edit_ui.html",zones=zones_table.find())
 
-@app.route('/add_zone',methods=['POST'])
-def add_zone():
-  if request.method == 'POST':
-    name = request.form['name']
-    width = request.form['width']
-    height = request.form['height']
-    zone_doc = {'_id': name, "height":height,"width":width,"top":0,"left":0}
-    zones_table.insert_or_replace(doc=zone_doc)
-    return redirect('edit')
+@app.route('/save_zone',methods=['POST'])
+def save_zone():
+  name = request.form['zone_name']
+  width = request.form['zone_width']
+  height = request.form['zone_height']
+  top = request.form['zone_top']
+  left = request.form['zone_left']
+  zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left}
+  zones_table.insert_or_replace(doc=zone_doc)
+  return "{} updated".format(name)
+
+@app.route('/delete_zone',methods=['POST'])
+def delete_zone():
+  name = request.form['zone_name']
+  zones_table.delete(_id=name)
+  return "{} Deleted".format(name)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

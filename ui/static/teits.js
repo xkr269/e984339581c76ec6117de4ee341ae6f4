@@ -48,6 +48,7 @@ $('.drop.zone').click(function(e){
             });
 });
 
+
 $('#main_map.drop').droppable({
     drop : function(e,ui){
         var zone_id = ui.draggable.attr('id');
@@ -56,6 +57,8 @@ $('#main_map.drop').droppable({
         set_zone_position(zone_id,top,left); 
     },
 }); 
+
+
 
 $("#back_home_button").click(function(){
         $('#drone_1').animate({
@@ -68,6 +71,51 @@ $("#back_home_button").click(function(){
             });
 })
 
+
+$("#zone_save").click(function(){
+        $.ajax({
+            url: 'save_zone',
+            type: 'post',
+            data: {"zone_name":$("#zone_name").val(),
+                    "zone_width":$("#zone_width").val(),
+                    "zone_height":$("#zone_height").val(),
+                    "zone_top":$("#zone_top").val(),
+                    "zone_left":$("#zone_left").val(),
+                    },
+            success:function(data){
+                console.log(data);
+                location.reload();
+            }
+        });
+})
+
+
+$("#zone_delete").click(function(){
+        $.ajax({
+            url: 'delete_zone',
+            type: 'post',
+            data: {"zone_name":$("#zone_name").val()
+                    },
+            success:function(data){
+                console.log(data);
+                location.reload();
+            }
+        });
+})
+
+
+function update_zone_info(zone_id){
+    $("#zone_name").val($("#"+zone_id).attr("id"));
+    $("#zone_width").val($("#"+zone_id).width());
+    $("#zone_height").val($("#"+zone_id).height());
+    $("#zone_top").val($("#"+zone_id).offset().top);
+    $("#zone_left").val($("#"+zone_id).offset().left);
+}
+
+$(".zone.drag").click(function(){
+    console.log("update");
+    update_zone_info($(this).attr("id"));
+})
 
 $( document ).ready(function(){
 /*  display_streams();
