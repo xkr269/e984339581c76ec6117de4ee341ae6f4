@@ -1,8 +1,9 @@
-import cv2,sys,io
+import cv2,sys,io,time
 from io import StringIO
 import numpy
 from random import randint
 from PIL import Image
+from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from confluent_kafka import Consumer, KafkaError, Producer
 
 # Parse args
@@ -14,6 +15,13 @@ print('### Detecting faces')
 # Face detection params
 cascPath = "haarcascade_frontalface_default.xml"
 faceCascade = cv2.CascadeClassifier(cascPath)
+
+# Build Ojai MapRDB access
+COUNT_MAPRDB_PATH = '/mapr/demo.mapr.com/frenchpatrol/detection_meta'  # Path for the table that stores people count
+connection_str = "192.168.56.102:5678?auth=basic;user=mapr;password=mapr;ssl=false"
+connection = ConnectionFactory().get_connection(connection_str=connection_str)
+count_db_con = connection.get_or_create_store(COUNT_MAPRDB_PATH)
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 # Build consumer
 consumer_group = randint(2000, 2999)
@@ -44,6 +52,8 @@ while running:
 		    minSize=(30, 30)
 		)
 		print('   -> Found {0} faces!'.format(len(faces)))
+		curr_doc_id = current_milli_time()
+		count_db_con.insert_or_replace(doc={'_id':str(curr_doc_id), 'drone_id':'1', 'people_count':len(faces)})
 		for (x, y, w, h) in faces:
 		    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
 		print('   -> Writing to : ' + write_topic)
