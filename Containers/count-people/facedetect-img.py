@@ -56,6 +56,37 @@ while running:
 		count_db_con.insert_or_replace(doc={'_id':str(curr_doc_id), 'drone_id':'1', 'people_count':len(faces)})
 		for (x, y, w, h) in faces:
 		    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+		# HUD dashboard
+		height, width, channels = image.shape
+		opacity = 0.2
+		margins = 5
+		overlay = image.copy()
+		#Top Left box
+		tlbox_width = 100
+		tlbox_height = 100
+		tlbox_xpos = margins
+		tlbox_ypos = margins
+		cv2.rectangle(overlay, (tlbox_xpos, tlbox_ypos), (tlbox_width, tlbox_height), (0, 255, 0), cv2.FILLED)
+		cv2.rectangle(image, (tlbox_xpos, tlbox_ypos), (tlbox_width, tlbox_height), (0, 255, 0))
+		#Bottom Left box
+		blbox_width = 200
+		blbox_height = 100
+		blbox_xpos = margins
+		blbox_ypos = height-blbox_height-margins
+		cv2.rectangle(overlay, (blbox_xpos, blbox_ypos), (blbox_xpos+blbox_width, blbox_ypos+blbox_height), (0, 255, 0), cv2.FILLED)
+		cv2.rectangle(image, (blbox_xpos, blbox_ypos), (blbox_xpos+blbox_width, blbox_ypos+blbox_height), (0, 255, 0))
+		#Bottom Right radar
+		brcircle_radius = 60
+		brcircle_xpos = width-brcircle_radius-margins
+		brcircle_ypos = height-brcircle_radius-margins
+		cv2.circle(overlay, (brcircle_xpos, brcircle_ypos), brcircle_radius, (0, 255, 0), cv2.FILLED)
+		cv2.circle(image, (brcircle_xpos, brcircle_ypos), brcircle_radius, (0, 255, 0))
+		cv2.circle(image, (brcircle_xpos, brcircle_ypos), brcircle_radius-10, (0, 255, 0))
+		cv2.circle(image, (brcircle_xpos, brcircle_ypos), brcircle_radius-20, (0, 255, 0))
+		cv2.circle(image, (brcircle_xpos, brcircle_ypos), brcircle_radius-30, (0, 255, 0))
+		cv2.circle(image, (brcircle_xpos, brcircle_ypos), brcircle_radius-40, (0, 255, 0))
+		#Add overlay
+		cv2.addWeighted(overlay, opacity, image, 1 - opacity, 0, image)
 		print('   -> Writing to : ' + write_topic)
 		ret, jpeg = cv2.imencode('.png', image)
 		producer.produce(dst_topic, jpeg.tobytes())
