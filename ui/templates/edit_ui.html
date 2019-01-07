@@ -20,11 +20,15 @@
     </div>
     <div class="col-md-5 align-middle">
 
-    <h4>Change Background image</h1>
+    <h4>Background image</h1>
     <form method=post enctype=multipart/form-data>
       <input type=file name=file>
       <input type=submit value=Upload>
     </form>
+    <hr>
+    <h4>Scene width</h1>
+      <input id="scene_width" value="{{scene_width}}"> (in meters)
+      <button id="set_scene_width_button">Set</button>
     <hr>
     <h4>Edit drop zone</h1>
       name: <input type="text" id="zone_name"><br>

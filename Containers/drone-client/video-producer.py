@@ -30,7 +30,7 @@ def video_emitter(video):
         producer.flush()
         # To reduce CPU usage create sleep time of 0.2sec
         #time.sleep(0.2)
-	frameId += 1
+        frameId += 1
     # clear the capture
     video.release()
     print('done emitting')

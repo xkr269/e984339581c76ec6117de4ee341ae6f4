@@ -33,6 +33,9 @@ with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
 POSITIONS_STREAM = '/mapr/' + cluster_name + '/positions_stream'   # Positions stream path
 POSITIONS_TABLE = '/mapr/' + cluster_name + '/positions_table'  # Path for the table that stores positions information
 ZONES_TABLE = '/mapr/' + cluster_name + '/zones_table'   # Zones table path
+SCENE_TABLE = '/mapr/' + cluster_name + '/scene_table'   # Scene table path
+VIDEO_STREAM = '/mapr/' + cluster_name + '/video_stream'   # Video stream path
+
 
 UPLOAD_FOLDER = 'static'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
@@ -44,6 +47,7 @@ connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
+scene_table = connection.get_or_create_store(SCENE_TABLE)
 
 if args.reset:
   # Reset positions stream
@@ -97,28 +101,52 @@ def create_stream(drone_id):
     os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
     logging.debug("stream created")
 
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
-@app.after_request
-def add_header(r):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also to cache the rendered page for 10 minutes.
-    """
-    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    r.headers["Pragma"] = "no-cache"
-    r.headers["Expires"] = "0"
-    r.headers['Cache-Control'] = 'public, max-age=0'
-    return r
-
-######  Web pages  #####
+###################################
+#####         MAIN UI         #####
+###################################
 
 @app.route('/')
 def home():
   return render_template("teits_ui.html",zones=zones_table.find())
+
+
+
+@app.route('/update_drone_position',methods=["POST"])
+def update_drone_position():
+  drone_id = request.form["drone_id"]
+  drop_zone = request.form["drop_zone"]
+  try:
+    from_zone = positions_table.find_by_id(drone_id)["zone"]
+  except:
+    from_zone = "unpositionned"
+  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
+  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone}
+  p.produce("positions", json.dumps(message))
+  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
+
+
+
+@app.route('/video_stream/<drone_id>/<topic>')
+def video_stream(drone_id,topic):
+  create_stream(drone_id)
+  stream = "/" + drone_id + ":" + topic
+  consumer_group = randint(3000, 3999)
+  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': 'latest'}})
+  consumer.subscribe([stream])
+  return Response(stream_video(consumer), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+
+###################################
+#####       SCENE EDITOR      #####
+###################################
+
 
 @app.route('/edit',methods=['GET', 'POST'])
 def edit():
@@ -137,12 +165,11 @@ def edit():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
 
-  # zones = []
-  # for zone in zones_table.find():
-  #   zones.append(zone)
-
-
-  return render_template("edit_ui.html",zones=zones_table.find())
+  try:
+    scene_width = scene_table.find_by_id("scene")["width"]
+  except:
+    scene_width = 1
+  return render_template("edit_ui.html",zones=zones_table.find(),scene_width=scene_width)
 
 @app.route('/save_zone',methods=['POST'])
 def save_zone():
@@ -161,22 +188,16 @@ def delete_zone():
   zones_table.delete(_id=name)
   return "{} Deleted".format(name)
 
+@app.route('/set_scene_width',methods=['POST'])
+def set_scene_width():
+  width = request.form['scene_width']
+  scene_doc = {"_id":"scene","width":width}
+  scene_table.insert_or_replace(doc=scene_doc)
+  return "Width set"
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-@app.route('/update_drone_position',methods=["POST"])
-def update_drone_position():
-  drone_id = request.form["drone_id"]
-  drop_zone = request.form["drop_zone"]
-  try:
-    from_zone = positions_table.find_by_id(drone_id)["zone"]
-  except:
-    from_zone = "unpositionned"
-  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
-  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone}
-  p.produce("positions", json.dumps(message))
-  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
 
 @app.route('/update_zone_position',methods=["POST"])
 def update_zone_position():
@@ -188,18 +209,6 @@ def update_zone_position():
   zone_doc["left"] = left
   zones_table.insert_or_replace(doc=zone_doc)
   return json.dumps(zone_doc)
-
-
-@app.route('/video_stream/<drone_id>/<topic>')
-def video_stream(drone_id,topic):
-  create_stream(drone_id)
-  stream = "/" + drone_id + ":" + topic
-  consumer_group = randint(3000, 3999)
-  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': 'latest'}})
-  consumer.subscribe([stream])
-  return Response(stream_video(consumer), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
 
 
 
