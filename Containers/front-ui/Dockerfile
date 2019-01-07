@@ -1,4 +1,4 @@
-FROM maprtech/pacc:6.0.1_5.0.0_ubuntu16_yarn_streams
+FROM maprtech/pacc:6.1.0_6.0.0_ubuntu16_yarn_streams
 
 # System
 RUN sudo apt-get update -y
@@ -20,6 +20,9 @@ RUN export LD_LIBRARY_PATH=/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/l
 RUN sudo pip install --global-option=build_ext --global-option="--library-dirs=/opt/mapr/lib" --global-option="--include-dirs=/opt/mapr/include/" mapr-streams-python
 
 # Copy scripts
+RUN sudo mkdir -p /home/mapr
+RUN sudo chmod -Rf 777 /home/mapr
+RUN sudo chown -Rf 2000:2000 /home/mapr
 RUN mkdir -p /home/mapr/templates
 COPY templates/* /home/mapr/templates/
 RUN mkdir -p /home/mapr/static
