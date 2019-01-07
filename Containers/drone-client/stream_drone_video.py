@@ -1,9 +1,24 @@
 import argparse, tellopy, av, time, cv2, numpy
 from confluent_kafka import Producer
+from time import sleep
+import os
+
+# Logs handler
+def handler(event, sender, data, **args):
+    global file
+    global write_header
+    drone = sender
+    if event is drone.EVENT_FLIGHT_DATA or event is drone.EVENT_LOG_DATA:
+        print('record_log: %s: %s' % (event.name, str(data)))
 
 def main():
     drone = tellopy.Tello()
     try:
+        # Subscribe to logs and flifht data
+        drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+        drone.subscribe(drone.EVENT_LOG_DATA, handler)
+        drone.record_log_data()
+
         # Connect to the drone
         drone.connect()
         drone.wait_for_connection(600.0)
