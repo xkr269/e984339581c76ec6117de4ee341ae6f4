@@ -1,4 +1,4 @@
-FROM maprtech/pacc:6.1.0_6.0.0_ubuntu16_yarn_streams
+FROM maprtech/pacc:6.1.0_6.0.0_ubuntu16_yarn_fuse_streams
 
 # System
 RUN sudo apt-get update -y
