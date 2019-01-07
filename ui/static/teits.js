@@ -103,6 +103,19 @@ $("#zone_delete").click(function(){
         });
 })
 
+$("#set_scene_width_button").click(function(){
+        $.ajax({
+            url: 'set_scene_width',
+            type: 'post',
+            data: {"scene_width":$("#scene_width").val()
+                    },
+            success:function(data){
+                console.log(data);
+                location.reload();
+            }
+        });
+})
+
 
 function update_zone_info(zone_id){
     $("#zone_name").val($("#"+zone_id).attr("id"));
