@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import logging
+import io
 import os
 import json
 import time
@@ -23,12 +24,12 @@ parser.add_argument('-d', '--reset', dest='reset', default=False, help='Reset st
 args = parser.parse_args()
 
 
-
-# Retrieves current cluster name
-with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+def get_cluster_name():
+  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
-    cluster_name = first_line.split(' ')[0]
-    logging.debug('Cluster name : {}'.format(cluster_name))
+    return first_line.split(' ')[0]
+
+cluster_name = get_cluster_name()
 
 POSITIONS_STREAM = '/mapr/' + cluster_name + '/positions_stream'   # Positions stream path
 POSITIONS_TABLE = '/mapr/' + cluster_name + '/positions_table'  # Path for the table that stores positions information
@@ -36,12 +37,6 @@ ZONES_TABLE = '/mapr/' + cluster_name + '/zones_table'   # Zones table path
 SCENE_TABLE = '/mapr/' + cluster_name + '/scene_table'   # Scene table path
 VIDEO_STREAM = '/mapr/' + cluster_name + '/video_stream'   # Video stream path
 
-
-UPLOAD_FOLDER = 'static'
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
-
-sleep_time = 0
-  
 # Create database connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
@@ -49,14 +44,23 @@ positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 scene_table = connection.get_or_create_store(SCENE_TABLE)
 
+
+UPLOAD_FOLDER = 'static'
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+video_sleep_time = 0
+  
 if args.reset:
   # Reset positions stream
   os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
   print("positions stream deleted")
 
+
+
   # Init drone position
   print("drone position reset")
   positions_table.insert_or_replace(doc={'_id': 'drone_1', "zone":"home_base"})
+
 
 
 # Configure positions stream
@@ -68,23 +72,42 @@ if not os.path.islink(POSITIONS_STREAM):
 
 logging.debug("creating producer for {}".format(POSITIONS_STREAM))
 p = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
+offset_reset_mode = 'earliest'
+
+
+
+def create_stream(stream_path):
+  if not os.path.islink(stream_path):
+    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
 
 
 def stream_video(consumer):
     running = True
-    frameId = 0
     print('Start of loop')
     while running:
-        print('  Polling message')
         msg = consumer.poll() #timeout=1)
-        print('  Message obtained')
         if msg is None:
             print('  Message is None')
             continue
         if not msg.error():
-            print('  Message is valid, receiving frame ' + str(frameId))
-            yield (b'--frame\r\n' + b'Content-Type: image/png\r\n\r\n' + msg.value() + b'\r\n\r\n')
-            time.sleep(sleep_time)
+            print(msg.value().decode('utf-8'))
+            json_msg = json.loads(msg.value().decode('utf-8'))
+            frameId = json_msg['index']
+            print('Message is valid, sending frame ' + str(frameId))
+            try:
+              image_name = "/mapr/demo.mapr.com/images/frame-{}.jpg".format(frameId)
+              with open(image_name, "rb") as imageFile:
+                f = imageFile.read()
+                b = bytearray(f)
+              # time.sleep(1/20)
+              yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
+            except Exception as ex:
+              print("can't open file {}".format(frameId))
+              print(ex)
+  
+            if video_sleep_time:
+              print("wait")
+              time.sleep(video_sleep_time)
             frameId += 1
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             print('  Bad message')
@@ -94,12 +117,7 @@ def stream_video(consumer):
         #     running = False
 
 
-def create_stream(drone_id):
-  stream_path = '/mapr/' + cluster_name + "/" + drone_id
-  if not os.path.islink(stream_path):
-    logging.debug("creating stream {}".format(stream_path))
-    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-    logging.debug("stream created")
+
 
 
 app = Flask(__name__)
@@ -133,10 +151,9 @@ def update_drone_position():
 
 @app.route('/video_stream/<drone_id>/<topic>')
 def video_stream(drone_id,topic):
-  create_stream(drone_id)
-  stream = "/" + drone_id + ":" + topic
+  stream = '/mapr/demo.mapr.com/video_stream:raw'
   consumer_group = randint(3000, 3999)
-  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': 'latest'}})
+  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': offset_reset_mode}})
   consumer.subscribe([stream])
   return Response(stream_video(consumer), mimetype='multipart/x-mixed-replace; boundary=frame')
 

@@ -1,117 +1,116 @@
+"""
+Pilot application for TEITS demo
+
+What it does :
+- Connects to the drone
+- Gets the video
+- Stores each frame in a folder
+- Stores frame indexes in a stream (video_stream) in a topic named with drone id
+- reads movements instructions from a stream
+
+What has to be defined :
+- the drone ID
+- FPS for the transmitted video
+- the project folder on the cluster
+
+"""
+
+
+import time
+import sys
+import av
 import tellopy
 import json
-import time
-from confluent_kafka import Producer, Consumer, KafkaError
+import threading
+from confluent_kafka import Producer
 
 
-
-# zones coordinates (in meter)
-zones = {}
-zones["toureiffel"] = (1,1)
-zones["home_base"] = (0,0)
-zones["notredame"] = (1,0)
-zones["arcdetriomphe"] = (0,1)
-zones["sacrecoeur"] = (2,0)
-zones["montparnasse"] = (0,2)
-zones["geode"] = (2,1)
-zones["republique"] = (1,2)
-
-default_speed = 35 # in % of max speed
-time_shift = 1 # time multiplier ratio
-
-def move(drone,from_zone,drop_zone):
-    print("moving from {} to {}".format(from_zone,drop_zone))
-    # horizontal move
-
-    if from_zone == "home_base" and drop_zone == "home_base":
-        drone.quit()
-        exit()
-
-    if from_zone == "home_base":
-        drone.takeoff()
-        time.sleep(5)
+DRONE_ID = 1
+FPS = 20.0
+PROJECT_FOLDER = "/teits"
 
 
-    x_move = zones[drop_zone][0] - zones[from_zone][0]
-    y_move = zones[drop_zone][1] - zones[from_zone][1]
-    print("x_move = {}, y_move = {}".format(x_move,y_move))
-    if x_move > 0 :
-        drone.right(default_speed)
-        print("sleep for {} ".format(abs(x_move)))
-        time.sleep(abs(x_move) * time_shift)
-        drone.right(0)
-    elif x_move < 0 :
-        drone.left(default_speed)
-        time.sleep(abs(x_move)* time_shift)
-        drone.left(0)
+def get_cluster_name():
+  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+    first_line = f.readline()
+    return first_line.split(' ')[0]
 
-    time.sleep(1)
+def create_stream(stream_path):
+  if not os.path.islink(stream_path):
+    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
 
-    if y_move > 0 :
-        drone.forward(default_speed)
-        time.sleep(abs(y_move)* time_shift)
-        drone.forward(0)
-    elif y_move < 0 :
-        drone.backward(default_speed)
-        time.sleep(abs(y_move)* time_shift)
-        drone.backward(0)
+cluster_name = get_cluster_name()
 
-    time.sleep(1)
-
-    if drop_zone == "home_base":
-        drone.land()
-        time.sleep(5)
+IMAGE_FOLDER = "/mapr/" + cluster_name + PROJECT_FOLDER + "/" + STR(DRONE_ID) + "/images/source/"
+VIDEO_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/source_video_stream"
+POSITIONS_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/positions_stream"
 
 
+# test if folders exist and create them if needed
+if not os.path.exists(IMAGE_FOLDER):
+    os.makedirs(IMAGE_FOLDER)
+
+# test if streams exist and create them if needed
+create_stream(VIDEO_STREAM)
+create_stream(POSITIONS_STREAM)
 
 
-def main():
-    drone = tellopy.Tello()
+# Function for transfering the video frames to FS and Stream
+def get_drone_video():
+    global FPS
+    global DRONE_ID
+    global VIDEO_STREAM
+    global IMAGE_FOLDER
+    producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
+    current_sec = 0
+    last_frame_time = 0
+    container = av.open(drone.get_video_stream())
     try:
-        # Connect to the drone
-        print("Connecting to drone")
-        drone.connect()
-        drone.wait_for_connection(600.0)
-        print("Connected")
+        start_time = time.time()
+        received_frames = 0
+        sent_frames = 0
+        while True:
+            for frame in container.decode(video=0):
+                received_frames += 1
+                # producer.produce(topic, jpeg.tobytes())
+                current_time = time.time()
+                if current_time > (last_frame_time + float(1/frames_per_second)):
+                    # print("producing frame {}".format(frame.index))
+                    frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
+                    producer.produce(topic, json.dumps({"index":frame.index}))
+                    sent_frames += 1
+                    last_frame_time = time.time()
 
-        # Poll positions stream
-        POSITIONS_STREAM_PATH = '/mapr/demo.mapr.com/positions_stream'   # Positions stream path
-
-        c = Consumer({'group.id': "defgroup",'default.topic.config': {'auto.offset.reset': 'latest'}})
-        c.subscribe([POSITIONS_STREAM_PATH + ":positions"])
-        nb_moves = 0
-        while nb_moves < 5 :
-          msg = c.poll()
-          if msg is None :
-            continue
-          if not msg.error():
-            print("message received")
-            print(msg.value())
-            value = json.loads(msg.value())
-            from_zone = value["from_zone"]
-            drop_zone = value["drop_zone"]
-            move(drone,from_zone,drop_zone)
-            nb_moves += 1
-
-          elif msg.error().code() != KafkaError._PARTITION_EOF:
-            print(msg.error())
+                # Print stats every second
+                elapsed_time = time.time() - start_time
+                if int(elapsed_time) != current_sec:
+                    sys.stdout.write("Elapsed : {} s, received {} fps , sent {} fps                 \r".format(elapsed_time,received_frames,sent_frames))
+                    sys.stdout.flush()
+                    received_frames = 0
+                    sent_frames = 0
+                    current_sec = int(elapsed_time)
 
 
     # Catch exceptions
     except Exception as ex:
-        #exc_type, exc_value, exc_traceback = sys.exc_info()
-        #traceback.print_exception(exc_type, exc_value, exc_traceback)
         print(ex)
 
-    # Clean exit w/landing + disconnect
-    finally:
-        print('Disconnecting...')
-        drone.land()
-        drone.quit()
 
-    drone.land()
-    drone.quit()
+
+def main():
+    
+    drone = tellopy.Tello()
+    drone.connect()
+    drone.wait_for_connection(60)
+
+    # create video thread
+    videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    videoThread.start()
+
+    input("Press Enter to exit...")
+
+    exit(1)
+
 
 if __name__ == '__main__':
-    # Launch main
     main()
