@@ -17,6 +17,8 @@ What has to be defined :
 
 
 import time
+from time import sleep
+import os
 import sys
 import av
 import tellopy
@@ -25,7 +27,7 @@ import threading
 from confluent_kafka import Producer
 
 
-DRONE_ID = 1
+DRONE_ID = "1"
 FPS = 20.0
 PROJECT_FOLDER = "/teits"
 
@@ -35,13 +37,14 @@ def get_cluster_name():
     first_line = f.readline()
     return first_line.split(' ')[0]
 
-def create_stream(stream_path):
+def test_stream(stream_path):
   if not os.path.islink(stream_path):
-    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-
+    print("stream {} is missing. Exiting.".format(stream_path))
+    sys.exit()
+    
 cluster_name = get_cluster_name()
 
-IMAGE_FOLDER = "/mapr/" + cluster_name + PROJECT_FOLDER + "/" + STR(DRONE_ID) + "/images/source/"
+IMAGE_FOLDER = "/mapr/" + cluster_name + PROJECT_FOLDER + "/" + str(DRONE_ID) + "/images/source/"
 VIDEO_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/source_video_stream"
 POSITIONS_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/positions_stream"
 
@@ -51,12 +54,22 @@ if not os.path.exists(IMAGE_FOLDER):
     os.makedirs(IMAGE_FOLDER)
 
 # test if streams exist and create them if needed
-create_stream(VIDEO_STREAM)
-create_stream(POSITIONS_STREAM)
+test_stream(VIDEO_STREAM)
+test_stream(POSITIONS_STREAM)
+
+
+file = None
+write_header = True
+tello_address = ('192.168.10.1', 8889)
+
+def handler(event, sender, data, **args):
+    drone = sender
+    if event is drone.EVENT_LOG_DATA:
+        print(data)
 
 
 # Function for transfering the video frames to FS and Stream
-def get_drone_video():
+def get_drone_video(drone):
     global FPS
     global DRONE_ID
     global VIDEO_STREAM
@@ -72,10 +85,8 @@ def get_drone_video():
         while True:
             for frame in container.decode(video=0):
                 received_frames += 1
-                # producer.produce(topic, jpeg.tobytes())
                 current_time = time.time()
-                if current_time > (last_frame_time + float(1/frames_per_second)):
-                    # print("producing frame {}".format(frame.index))
+                if current_time > (last_frame_time + float(1/FPS)):
                     frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
                     producer.produce(topic, json.dumps({"index":frame.index}))
                     sent_frames += 1
@@ -90,26 +101,50 @@ def get_drone_video():
                     sent_frames = 0
                     current_sec = int(elapsed_time)
 
-
     # Catch exceptions
     except Exception as ex:
         print(ex)
 
 
 
+def send_to_drone(msg,drone):
+    msg = msg.encode(encoding="utf-8") 
+    sent = drone.sock.sendto(msg, tello_address)
+
+
 def main():
-    
+
     drone = tellopy.Tello()
+    drone.set_loglevel("LOG_DEBUG")
+
+    # drone.subscribe(drone.EVENT_LOG_DATA, handler)
+
+    # #recvThread create
+    # recvThread = threading.Thread(target=recv)
+    # recvThread.start()
+    
     drone.connect()
     drone.wait_for_connection(60)
 
-    # create video thread
-    videoThread = threading.Thread(target=get_drone_video,args=[drone])
-    videoThread.start()
+    # sleep(1)
 
-    input("Press Enter to exit...")
+    # # create video thread
+    # videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    # videoThread.start()
 
-    exit(1)
+    # send_to_drone("command",drone)
+    # time.sleep(3)
+    # send_to_drone("takeoff",drone)
+    # time.sleep(3)
+    # send_to_drone("land",drone)
+    # time.sleep(3)
+    drone.custom_command("takeoff")
+    sleep(2)
+    drone.land()
+    drone.quit()
+
+
+    sys.exit()
 
 
 if __name__ == '__main__':

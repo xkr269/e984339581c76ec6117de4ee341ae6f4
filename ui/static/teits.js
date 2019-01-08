@@ -1,9 +1,7 @@
-
+patrol_in_progess = false;
 
 $(function(){
-
     $('.drag').draggable({revert:"invalid",revertDuration: 300}); // appel du plugin
-
 });
 
 function set_drone_position(drone_id,drop_zone){
@@ -33,14 +31,14 @@ $('.drop.zone').droppable({
     drop : function(e,ui){
         var drop_zone = $(this).attr('id');
         var drone_id = ui.draggable.attr('id');
-        set_position(drone_id,drop_zone);       
+        set_drone_position(drone_id,drop_zone);       
     },
 }); 
 
 $('.drop.zone').click(function(e){
     $('#drone_1').animate({
-            top : e.pageY - 35,
-            left: e.pageX - 44
+            top : e.pageY - 44,
+            left: e.pageX - 35
             }, 1000, function() {
                 var drop_zone = e.target.id;
                 var drone_id = "drone_1";
@@ -59,17 +57,83 @@ $('#main_map.drop').droppable({
 }); 
 
 
+function move_to_position(drone_id,zone_id){
+    console.log("moving " + drone_id + " to " + zone_id);
+    // Define zone center
+    var zone_div = $("#"+ zone_id);
+    var drone_div = $('#' + drone_id);
+    var position = zone_div.position();
+    var height = zone_div.height();
+    var width = zone_div.width();
+    drone_div.animate({
+        top : position.top + height/2 - drone_div.height()/2,
+        left: position.left + width/2 - drone_div.width()/2
+        }, 1000, function() {
+            set_drone_position(drone_id,zone_id);  
+        });
+    }
 
 $("#back_home_button").click(function(){
-        $('#drone_1').animate({
-            top : 70,
-            left: 930
-            }, 1000, function() {
-                var drop_zone = "home_base";
-                var drone_id = "drone_1";
-                set_position(drone_id,drop_zone);  
-            });
+    $(".drone").each(function(){
+        patrol_in_progess = false;
+        move_to_position($(this).attr("id"),"home_base")
+    })
 })
+
+$("#new_drone_button").click(function(){
+        if (!$("#drone_1_ui").is(":visible")){
+            $("#drone_1").show()
+            $("#drone_1_ui").show();
+            set_drone_position("drone_1","home_base");
+
+        }
+        else if (!$("#drone_2_ui").is(":visible")){
+            $("#drone_2").show()
+            $("#drone_2_ui").show();
+            set_drone_position("drone_2","home_base");
+        }
+        else {
+            $("#drone_3").show()
+            $("#drone_3_ui").show();
+            set_drone_position("drone_3","home_base");
+
+        }
+})
+
+
+$("#patrol_button").click(function(){
+    patrol_in_progess = true;
+    patrol();
+})
+
+
+
+
+function move_to_next_waypoint(drone_id){
+    $.ajax({
+        url: 'get_next_waypoint',
+        type: 'post',
+        data: {"drone_id":drone_id},
+        success:function(data){
+            console.log("next waypoint for " + drone_id);
+            console.log(data);
+            var next_waypoint = data;
+            move_to_position(drone_id, next_waypoint);
+        }
+    });
+}
+
+function patrol(){
+    $(".drone").each(function(){
+        var drone_id = $(this).attr("id")
+        if(patrol_in_progess){
+            move_to_next_waypoint(drone_id);
+        }
+    })
+    setTimeout(function(){
+                patrol();
+              }, 3000);
+}
 
 
 $("#zone_save").click(function(){
@@ -208,153 +272,4 @@ function display_streams(){
         }
     });
 }
-
-
-
-$("#replicate_streams").click(function(){
-    $("#replicate_streams").text("Replicating ...");
-    $.ajax({
-        url: 'replicate_streams',
-        type: 'get',
-        success:function(data){
-            setTimeout(function(){
-              $("#replicate_streams").text("Replicate streams");
-              $("#global_streams").show();
-            }, 1000 * 10);
-          }
-    });
-});
-
-
-function display_countries(){
-    $.ajax({
-        url: 'get_deployed_countries',
-        type: 'get',
-        success:function(data){
-            var current_countries = JSON.parse(data);
-            console.log(current_countries);
-            // Iterate over object
-            $.each(current_countries,function(index,value){
-                // get chart
-                if (contains(deployed_countries,value)){
-                  $("#" + value + "_docker_image").show();
-                }
-            });
-            $.each(deployed_countries,function(index,value){
-                // get chart
-                if (!contains(current_countries,value)){
-                  $("#" + value + "_docker_image").hide();
-                }
-            });
-            deployed_countries = current_countries;
-            setTimeout(function(){
-                display_countries();
-              }, 1000);
-        }
-    });
-}
-
-
-
-
-
-function create_chart(country){
-    console.log("creating chart for " + country);
-    if (!$('#'+ country + "_chart").length){
-        $("#" + country + "_charts").append("<div class='dnd_charts' id='"+country+"_chart'></div>");
-    }
-    var chart_div = country+"_chart";
-    var myChart = Highcharts.chart(chart_div, {
-        chart: {
-            type: 'column',
-            height : 200,
-            width : 300,
-/*            backgroundColor:'rgba(255, 255, 255, 0.0)'
-*/        },
-        title: {
-            text: country
-        },
-        xAxis: {
-            categories: [],
-            labels:
-              {
-                enabled: false
-              }
-        },
-        yAxis: {
-            title: {
-                text: 'Count'
-            }
-        },
-        series: [{
-            showInLegend: false, 
-            data: []
-        }]
-    });
-    return myChart;
-
-}
-
-
-function update_country_charts(){
-    console.log("update country charts");
-    $.ajax({
-        url: 'get_country_stream_data',
-        type: 'get',
-        success:function(data){
-            loaded_data = JSON.parse(data);
-            // Iterate over object
-            $.each(loaded_data,function(key,value){
-                console.log(key);
-                // get or create chart
-                if (!$('#' + key + "_chart").length){
-                    create_chart(key);
-                }
-                var chart=$("#" + key + "_chart").highcharts();
-                // get and update values
-                var chart_data = chart.series[0].data;
-                //console.log(chart_data);
-                var new_data = [];
-                var categories = [];
-                for (var i = 0; i < chart_data.length; i++) {
-                    category = chart_data[i].category;
-                    categories.push(category);
-                    current_value = chart_data[i].y;
-                    incoming_value = value[category];
-                    if (incoming_value){
-                        new_value = current_value + incoming_value;
-                    }else{
-                        new_value = current_value;
-                    }
-                    new_data.push(new_value);
-                    delete value[category];
-                }
-                for (var category in value){
-                    if (category != "count"){
-                        categories.push(category);
-                        new_data.push(value[category]);                        
-                    }
-                }
-                chart.xAxis[0].setCategories(categories);
-                chart.series[0].setData(new_data);  
-            })
-            
-            setTimeout(function(){
-                update_country_charts();
-              }, 1000 * 2);
-        }
-    });
-}
-
-
-$( ".show_chart" ).mouseover(function() {
-  var country = $(this).attr("id").split('_')[0];
-  $("#"+country+"_charts").show();
-});
-
-$( ".show_chart" ).mouseout(function() {
-  var country = $(this).attr("id").split('_')[0];
-  $("#"+country+"_charts").hide();
-});
-
 

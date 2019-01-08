@@ -10,25 +10,46 @@
 </head>
 <body> 
   <div class="row">
-    <div class="col-md-7" id="main_map">
-      {% for zone in zones %}
-        <div class="border-visible drop zone"
-             id="{{zone._id}}" 
-             style="position: fixed; height:{{zone.height}}px;width: {{zone.width}}px; top:{{zone.top}}px;left:{{zone.left}}px">
+    <div class="col-md-7">
+
+
+      <div class="row" id="main_map">
+        {% for zone in zones %}
+          <div class="border-visible drop zone"
+               id="{{zone._id}}" 
+               style="position: absolute; height:{{zone.height}}px;width: {{zone.width}}px; top:{{zone.top}}px;left:{{zone.left}}px">
+          </div>
+        {% endfor %}
+        <div class="border-visible drag drone" id="drone_1" style="display: none;"></div>
+        <div class="border-visible drag drone" id="drone_2" style="display: none;"></div>
+        <div class="border-visible drag drone" id="drone_3" style="display: none;"></div>
+      </div>
+
+      <div class="row" id="command_buttons">
+        <div class="col-md-4 text-center">
+          <button id="new_drone_button">New Drone</button>
         </div>
-      {% endfor %}
-    <div class="border-visible drag drone" id="drone_1"></div>
+        <div class="col-md-4 text-center">
+          <button id="patrol_button">Patrol</button>
+        </div>
+        <div class="col-md-4 text-center">
+          <button id="back_home_button">Back Home</button>
+        </div>      
+      </div> 
+    
     </div>
-    <div class="col-md-5 align-middle">
-      <div class="row" id="drone_1_HUD">
-        <div class="col-md-3">
-          <button id="back_home_button">Back home</button>
-        </div>
-        <div class="col-md-9">
-          <img src="video_stream/drone1/raw" id="drone_1_video">
-        </div>
+    <div class="col-md-5">
+      <div class="row drone_ui border-visible" id="drone_1_ui" style="display: none;">
+        This is drone 1 UI
+      </div>
+      <div class="row drone_ui border-visible" id="drone_2_ui" style="display: none;">
+        This is drone 2 UI
+      </div>
+      <div class="row drone_ui border-visible" id="drone_3_ui" style="display: none;">
+        This is drone 3 UI
       </div>
     </div>
+  
   </div>
 
 

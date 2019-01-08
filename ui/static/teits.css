@@ -17,70 +17,25 @@ body {
   border-style: solid;
 }
 
-#arcdetriomphe {
-  position: fixed;
-  top: 150px;
-  left: 200px;
-  width: 150px;
-  height: 90px;
-}
 
-
-#toureiffel {
-  position: fixed;
-  top: 250px;
-  left: 200px;
-  width: 150px;
-  height: 130px;
-}
-
-
-#montparnasse {
-  position: fixed;
-  top: 390px;
-  left: 275px;
-  width: 150px;
-  height: 130px;
-}
-
-#notredame {
-  position: fixed;
-  top: 250px;
-  left: 430px;
-  width: 140px;
-  height: 130px;
-}
-
-#sacrecoeur {
-  position: fixed;
-  top: 0px;
-  left: 430px;
-  width: 170px;
-  height: 150px;
-}
-
-
-#geode {
-  position: fixed;
-  top: 35px;
-  left: 620px;
-  width: 130px;
-  height: 100px;
-}
-
-#republique {
-  position: fixed;
-  top: 270px;
-  left: 600px;
-  width: 120px;
-  height: 130px;
-}
-
-
-#drone_1  {
+#drone_1 {
   position: absolute;
-  top: 70px;
-  left: 930px;
+  top: 50px;
+  left: 70px;
+}
+
+#drone_2 {
+  position: absolute;
+  top: 120px;
+  left: 70px;
+}
+
+#drone_3 {
+  position: absolute;
+  top: 190px;
+  left: 70px;
+}
+.drone {
   width: 88px;
   height: 70px;
   background-image: url(drone.png);
@@ -89,12 +44,15 @@ body {
 }
 
 
-#drone_1_HUD  {
-  height: 300px;
+.drone_ui  {
+  height: 200px;
+  display: flex;
+  justify-content: center;
   align-items: center;
 }
 
-#drone_1_video  {
+
+#drone_video  {
   height: 200px;
   width: 300px;
 }

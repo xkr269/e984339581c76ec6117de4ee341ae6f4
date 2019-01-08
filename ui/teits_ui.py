@@ -148,6 +148,35 @@ def update_drone_position():
   return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
 
 
+@app.route('/get_position',methods=["POST"])
+def get_position():
+  drone_id = request.form["drone_id"]
+  try:
+    position = positions_table.find_by_id(drone_id)["zone"]
+  except:
+    position = "unpositionned"
+  return position
+
+
+@app.route('/get_next_waypoint',methods=["POST"])
+def get_next_waypoint():
+  waypoints = []
+  for zone in zones_table.find():
+    if zone["_id"] != "home_base":
+      waypoints.append(zone["_id"])
+
+  drone_id = request.form["drone_id"]
+  current_position = positions_table.find_by_id(drone_id)["zone"]
+  
+  if current_position == "home_base":
+    drone_number = int(drone_id.split("_")[1])
+    return waypoints[(drone_number + 1) % len(waypoints)]
+  current_index = waypoints.index(current_position)
+  if current_index == len(waypoints)-1:
+    new_index = 0
+  else :
+    new_index = current_index + 1
+  return waypoints[new_index]
 
 @app.route('/video_stream/<drone_id>/<topic>')
 def video_stream(drone_id,topic):
