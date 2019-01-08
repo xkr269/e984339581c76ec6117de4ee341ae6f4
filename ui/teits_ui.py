@@ -258,7 +258,9 @@ def save_zone():
   height = request.form['zone_height']
   top = request.form['zone_top']
   left = request.form['zone_left']
-  zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left}
+  x = request.form['zone_x']
+  y = request.form['zone_y']
+  zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
 

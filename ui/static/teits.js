@@ -147,6 +147,8 @@ $("#zone_save").click(function(){
                     "zone_height":$("#zone_height").val(),
                     "zone_top":$("#zone_top").val(),
                     "zone_left":$("#zone_left").val(),
+                    "zone_x":$("#zone_x").val(),
+                    "zone_y":$("#zone_y").val(),
                     },
             success:function(data){
                 console.log(data);

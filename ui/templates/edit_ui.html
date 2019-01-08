@@ -26,16 +26,20 @@
       <input type=submit value=Upload>
     </form>
     <hr>
-    <h4>Scene width</h1>
-      <input id="scene_width" value="{{scene_width}}"> (in meters)
-      <button id="set_scene_width_button">Set</button>
-    <hr>
     <h4>Edit drop zone</h1>
       name: <input type="text" id="zone_name"><br>
       width: <input type="text" id="zone_width"><br>
       height: <input type="text" id="zone_height"><br>
       top: <input type="text" id="zone_top"><br>
       left: <input type="text" id="zone_left"><br>
+      <hr>
+      <h4> Zone positionning </h4>
+      x_position: <input type="text" id="zone_x"><br>
+      y_position: <input type="text" id="zone_y"><br>
+      x and y are positionning each zone using cartesian coordinates <br>
+      (x to the right, y to the front).<br>
+      x and y are in meters.<br>
+      At start time, drone are oriented to the front. <br>
       <button id="zone_save">Save</button><button id="zone_delete">Delete</button>
     </div>
   </div>
