@@ -45,6 +45,7 @@ def get_drone_video(drone):
         while True:
             for frame in container.decode(video=0):
                 received_frames += 1
+                print("received frame {}".format(frame.index))
                 # producer.produce(topic, jpeg.tobytes())
                 current_time = time.time()
                 if current_time > (last_frame_time + float(1/frames_per_second)):
@@ -73,6 +74,7 @@ def get_drone_video(drone):
 def main():
     
     drone = tellopy.Tello()
+    # drone.set_loglevel("LOG_DEBUG")
     drone.connect()
     drone.wait_for_connection(60)
 

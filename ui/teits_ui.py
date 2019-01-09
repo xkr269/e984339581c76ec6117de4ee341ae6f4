@@ -31,11 +31,18 @@ def get_cluster_name():
 
 cluster_name = get_cluster_name()
 
-POSITIONS_STREAM = '/mapr/' + cluster_name + '/positions_stream'   # Positions stream path
-POSITIONS_TABLE = '/mapr/' + cluster_name + '/positions_table'  # Path for the table that stores positions information
-ZONES_TABLE = '/mapr/' + cluster_name + '/zones_table'   # Zones table path
-SCENE_TABLE = '/mapr/' + cluster_name + '/scene_table'   # Scene table path
-VIDEO_STREAM = '/mapr/' + cluster_name + '/video_stream'   # Video stream path
+PROJECT_FOLDER = "/teits"
+ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
+
+ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
+SCENE_TABLE = ROOT_PATH + '/scene_table'   # Scene table path
+
+POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
+
+VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
+POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
+OFFSET_RESET_MODE = 'latest'
+
 
 # Create database connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -55,11 +62,14 @@ if args.reset:
   os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
   print("positions stream deleted")
 
-
+  # Reset video stream
+  os.system('maprcli stream delete -path ' + VIDEO_STREAM)
+  print("video stream deleted")
 
   # Init drone position
-  print("drone position reset")
-  positions_table.insert_or_replace(doc={'_id': 'drone_1', "zone":"home_base"})
+  print("Positions table deleted")
+  os.system('maprcli table delete -path ' + POSITIONS_TABLE)
+  
 
 
 
@@ -70,10 +80,16 @@ if not os.path.islink(POSITIONS_STREAM):
     logging.debug("stream created")
 
 
+# Positions stream. Each drone has its own topic
 logging.debug("creating producer for {}".format(POSITIONS_STREAM))
-p = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
-offset_reset_mode = 'earliest'
+positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
 
+
+# Configure video stream
+if not os.path.islink(VIDEO_STREAM):
+    logging.debug("creating stream {}".format(VIDEO_STREAM))
+    os.system('maprcli stream create -path ' + VIDEO_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+    logging.debug("stream created")
 
 
 def create_stream(stream_path):
@@ -81,9 +97,14 @@ def create_stream(stream_path):
     os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
 
 
-def stream_video(consumer):
+def stream_video(drone_id):
+    global VIDEO_STREAM
+    global OFFSET_RESET_MODE
     running = True
-    print('Start of loop')
+    print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
+    consumer_group = randint(3000, 3999)
+    consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
+    consumer.subscribe([VIDEO_STREAM+":"+drone_id])
     while running:
         msg = consumer.poll() #timeout=1)
         if msg is None:
@@ -95,7 +116,7 @@ def stream_video(consumer):
             frameId = json_msg['index']
             print('Message is valid, sending frame ' + str(frameId))
             try:
-              image_name = "/mapr/demo.mapr.com/images/frame-{}.jpg".format(frameId)
+              image_name = ROOT_PATH + "/" + drone_id + "/images/source/frame-{}.jpg".format(frameId)
               with open(image_name, "rb") as imageFile:
                 f = imageFile.read()
                 b = bytearray(f)
@@ -134,18 +155,35 @@ def home():
 
 
 
-@app.route('/update_drone_position',methods=["POST"])
-def update_drone_position():
+@app.route('/set_drone_position',methods=["POST"])
+def set_drone_position():
   drone_id = request.form["drone_id"]
   drop_zone = request.form["drop_zone"]
   try:
-    from_zone = positions_table.find_by_id(drone_id)["zone"]
+    action = request.form["action"]
   except:
-    from_zone = "unpositionned"
-  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
-  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone}
-  p.produce("positions", json.dumps(message))
-  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
+    action = "wait"
+
+  try:
+    current_position = positions_table.find_by_id(drone_id)
+    from_zone = current_position["zone"]
+    current_status = current_position["status"]
+  except:
+    from_zone = "home_base"
+    current_status = "landed"
+
+  if action == "takeoff":
+    status = "flying"
+  elif action == "land":
+    status = "landed"
+  else:
+    status = current_status
+
+  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone, "status":status})
+  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone,"action":action}
+  positions_producer.produce(drone_id, json.dumps(message))
+  return "{} moved from zone {} to zone {} then {}".format(drone_id,from_zone,drop_zone,action)
+
 
 
 @app.route('/get_position',methods=["POST"])
@@ -178,13 +216,9 @@ def get_next_waypoint():
     new_index = current_index + 1
   return waypoints[new_index]
 
-@app.route('/video_stream/<drone_id>/<topic>')
-def video_stream(drone_id,topic):
-  stream = '/mapr/demo.mapr.com/video_stream:raw'
-  consumer_group = randint(3000, 3999)
-  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': offset_reset_mode}})
-  consumer.subscribe([stream])
-  return Response(stream_video(consumer), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/video_stream/<drone_id>')
+def video_stream(drone_id):
+  return Response(stream_video(drone_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 

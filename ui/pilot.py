@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 """
 Pilot application for TEITS demo
 
@@ -24,10 +26,10 @@ import av
 import tellopy
 import json
 import threading
-from confluent_kafka import Producer
+from confluent_kafka import Producer, Consumer, KafkaError
 
 
-DRONE_ID = "1"
+DRONE_ID = "drone_1"
 FPS = 20.0
 PROJECT_FOLDER = "/teits"
 
@@ -44,9 +46,11 @@ def test_stream(stream_path):
     
 cluster_name = get_cluster_name()
 
-IMAGE_FOLDER = "/mapr/" + cluster_name + PROJECT_FOLDER + "/" + str(DRONE_ID) + "/images/source/"
-VIDEO_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/source_video_stream"
-POSITIONS_STREAM = "/mapr/" + cluster_name + PROJECT_FOLDER + "/positions_stream"
+ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
+
+IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
+VIDEO_STREAM = ROOT_PATH + "/video_stream"
+POSITIONS_STREAM = ROOT_PATH + "/positions_stream"
 
 
 # test if folders exist and create them if needed
@@ -74,7 +78,8 @@ def get_drone_video(drone):
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
-    producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
+    print("producing into {}".format(VIDEO_STREAM))
+    video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
     current_sec = 0
     last_frame_time = 0
     container = av.open(drone.get_video_stream())
@@ -88,15 +93,16 @@ def get_drone_video(drone):
                 current_time = time.time()
                 if current_time > (last_frame_time + float(1/FPS)):
                     frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
-                    producer.produce(topic, json.dumps({"index":frame.index}))
+                    video_producer.produce(DRONE_ID, json.dumps({"index":frame.index}))
                     sent_frames += 1
                     last_frame_time = time.time()
 
                 # Print stats every second
                 elapsed_time = time.time() - start_time
                 if int(elapsed_time) != current_sec:
-                    sys.stdout.write("Elapsed : {} s, received {} fps , sent {} fps                 \r".format(elapsed_time,received_frames,sent_frames))
-                    sys.stdout.flush()
+                    # print("Elapsed : {} s, received {} fps , sent {} fps".format(elapsed_time,received_frames,sent_frames))
+                    # sys.stdout.write("Elapsed : {} s, received {} fps , sent {} fps                 \r".format(elapsed_time,received_frames,sent_frames))
+                    # sys.stdout.flush()
                     received_frames = 0
                     sent_frames = 0
                     current_sec = int(elapsed_time)
@@ -106,41 +112,68 @@ def get_drone_video(drone):
         print(ex)
 
 
+def move_to(drone,position):
+    global current_position
+    global current_angle
+    # calcul du deplacement
+    x = position[0] - current_position[0]
+    y = position[1] - current_position[1]
+    # calcul angle de rotation vs axe x
+    a = atan2(y,x)*180/pi
+    # angle de rotation corrige
+    b = a - current_angle
+    # rotation
+    turn(drone,b)
+    # update angle
+    current_angle = a
+    # distance a parcourir
+    d = sqrt(x*x + y*y)
+    # deplacement
+    forward(drone,d)
+    # update position
+    current_position = position
 
-def send_to_drone(msg,drone):
-    msg = msg.encode(encoding="utf-8") 
-    sent = drone.sock.sendto(msg, tello_address)
 
 
 def main():
 
     drone = tellopy.Tello()
-    drone.set_loglevel("LOG_DEBUG")
-
-    # drone.subscribe(drone.EVENT_LOG_DATA, handler)
-
-    # #recvThread create
-    # recvThread = threading.Thread(target=recv)
-    # recvThread.start()
     
     drone.connect()
     drone.wait_for_connection(60)
 
-    # sleep(1)
+    # create video thread
+    videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    videoThread.start()
 
-    # # create video thread
-    # videoThread = threading.Thread(target=get_drone_video,args=[drone])
-    # videoThread.start()
 
-    # send_to_drone("command",drone)
-    # time.sleep(3)
-    # send_to_drone("takeoff",drone)
-    # time.sleep(3)
-    # send_to_drone("land",drone)
-    # time.sleep(3)
-    drone.custom_command("takeoff")
-    sleep(2)
-    drone.land()
+    start_time = time.time()
+    flight_time = 180 # seconds
+
+    positions_consumer = Consumer({'group.id': "default",'default.topic.config': {'auto.offset.reset': 'latest'}})
+    positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
+
+    while True:
+        print("polling")
+        msg = positions_consumer.poll()
+        if msg is None:
+            print("none")
+            continue
+        if not msg.error():
+            json_msg = json.loads(msg.value().decode('utf-8'))
+            print(json_msg)
+            if json_msg["action"] == "takeoff":
+                drone.takeoff()
+            if json_msg["action"] == "land":
+                drone.land()
+        elif msg.error().code() != KafkaError._PARTITION_EOF:
+            print(msg.error())
+
+        if time.time() > start_time + flight_time:
+            print("Time expired")
+            break
+
+
     drone.quit()
 
 

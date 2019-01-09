@@ -4,16 +4,18 @@ $(function(){
     $('.drag').draggable({revert:"invalid",revertDuration: 300}); // appel du plugin
 });
 
-function set_drone_position(drone_id,drop_zone){
+function set_drone_position(drone_id,drop_zone,action){
     $.ajax({
-            url: 'update_drone_position',
+            url: 'set_drone_position',
             type: 'post',
-            data: {"drone_id":drone_id,"drop_zone":drop_zone},
+            data: {"drone_id":drone_id,"drop_zone":drop_zone,"action":action},
             success:function(data){
                 console.log(data)
             }
         });
 }
+
+
 
 function set_zone_position(zone_id,top,left){
     $.ajax({
@@ -57,7 +59,8 @@ $('#main_map.drop').droppable({
 }); 
 
 
-function move_to_position(drone_id,zone_id){
+
+function move_to_position(drone_id,zone_id,action){
     console.log("moving " + drone_id + " to " + zone_id);
     // Define zone center
     var zone_div = $("#"+ zone_id);
@@ -65,18 +68,17 @@ function move_to_position(drone_id,zone_id){
     var position = zone_div.position();
     var height = zone_div.height();
     var width = zone_div.width();
+    set_drone_position(drone_id,zone_id,action);
     drone_div.animate({
         top : position.top + height/2 - drone_div.height()/2,
         left: position.left + width/2 - drone_div.width()/2
-        }, 1000, function() {
-            set_drone_position(drone_id,zone_id);  
-        });
+        }, 1000);
     }
 
 $("#back_home_button").click(function(){
     $(".drone").each(function(){
         patrol_in_progess = false;
-        move_to_position($(this).attr("id"),"home_base")
+        move_to_position($(this).attr("id"),"home_base","land")
     })
 })
 
@@ -84,18 +86,18 @@ $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
             $("#drone_1").show()
             $("#drone_1_ui").show();
-            set_drone_position("drone_1","home_base");
+            set_drone_position("drone_1","home_base","takeoff");
 
         }
         else if (!$("#drone_2_ui").is(":visible")){
             $("#drone_2").show()
             $("#drone_2_ui").show();
-            set_drone_position("drone_2","home_base");
+            set_drone_position("drone_2","home_base","takeoff");
         }
         else {
             $("#drone_3").show()
             $("#drone_3_ui").show();
-            set_drone_position("drone_3","home_base");
+            set_drone_position("drone_3","home_base","takeoff");
 
         }
 })

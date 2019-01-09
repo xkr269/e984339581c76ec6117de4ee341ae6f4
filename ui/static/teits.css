@@ -52,7 +52,7 @@ body {
 }
 
 
-#drone_video  {
+.drone_video  {
   height: 200px;
   width: 300px;
 }

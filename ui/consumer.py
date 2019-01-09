@@ -9,10 +9,10 @@ with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     cluster_name = first_line.split(' ')[0]
     logging.debug('Cluster name : {}'.format(cluster_name))
 
-POSITIONS_STREAM_PATH = '/mapr/' + cluster_name + '/video_stream'   # Positions stream path
+POSITIONS_STREAM = '/mapr/' + cluster_name + '/teits/positions_stream'   # Positions stream path
 
 c = Consumer({'group.id': "defgroup",'default.topic.config': {'auto.offset.reset': 'earliest'}})
-c.subscribe([POSITIONS_STREAM_PATH + ":raw"])
+c.subscribe([POSITIONS_STREAM + ":drone_1"])
 while True:
   msg = c.poll()
   if msg is None:
