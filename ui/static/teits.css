@@ -57,3 +57,13 @@ body {
   width: 300px;
 }
 
+#command_buttons div {
+/*  height: 60px;*/
+  text-align: center;
+  line-height:60px;
+}
+
+#command_buttons button {
+  vertical-align: middle;
+  line-height: 20px;
+}

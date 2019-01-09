@@ -27,9 +27,10 @@ import tellopy
 import json
 import threading
 from confluent_kafka import Producer, Consumer, KafkaError
+from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 
 
-DRONE_ID = "drone_1"
+DRONE_ID = sys.argv[1]
 FPS = 20.0
 PROJECT_FOLDER = "/teits"
 
@@ -51,7 +52,12 @@ ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
 IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
 VIDEO_STREAM = ROOT_PATH + "/video_stream"
 POSITIONS_STREAM = ROOT_PATH + "/positions_stream"
+ZONES_TABLE = ROOT_PATH + "/zones_table"
 
+# Create database connection
+connection_str = "10.0.0.11:5678?auth=basic;user=mapr;password=mapr;ssl=false"
+connection = ConnectionFactory().get_connection(connection_str=connection_str)
+zones_table = connection.get_or_create_store(ZONES_TABLE)
 
 # test if folders exist and create them if needed
 if not os.path.exists(IMAGE_FOLDER):
@@ -65,11 +71,6 @@ test_stream(POSITIONS_STREAM)
 file = None
 write_header = True
 tello_address = ('192.168.10.1', 8889)
-
-def handler(event, sender, data, **args):
-    drone = sender
-    if event is drone.EVENT_LOG_DATA:
-        print(data)
 
 
 # Function for transfering the video frames to FS and Stream
@@ -112,26 +113,28 @@ def get_drone_video(drone):
         print(ex)
 
 
-def move_to(drone,position):
-    global current_position
-    global current_angle
+
+def move_to_zone(drone,start_zone,drop_zone):
+    # get start_zone coordinates
+    current_position_document = zones_table.find_by_id(start_zone)
+    current_position = (current_position_document["x"],current_position_document["y"])
+    # get drop_zone coordinates
+    new_position_document = zones_table.find_by_id(drop_zone)
+    new_position = (new_position_document["x"],new_position_document["y"])
+
     # calcul du deplacement
-    x = position[0] - current_position[0]
-    y = position[1] - current_position[1]
+    x = new_position[0] - current_position[0]
+    y = new_position[1] - current_position[1]
     # calcul angle de rotation vs axe x
-    a = atan2(y,x)*180/pi
-    # angle de rotation corrige
-    b = a - current_angle
+    angle = atan2(y,x)*180/pi
     # rotation
-    turn(drone,b)
-    # update angle
-    current_angle = a
+    drone.turn(angle)
     # distance a parcourir
-    d = sqrt(x*x + y*y)
+    distance = sqrt(x*x + y*y)
     # deplacement
-    forward(drone,d)
-    # update position
-    current_position = position
+    drone.forward(distance) # in m
+    # reset angle
+    turn(drone, -angle)
 
 
 
@@ -162,10 +165,13 @@ def main():
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             print(json_msg)
-            if json_msg["action"] == "takeoff":
-                drone.takeoff()
-            if json_msg["action"] == "land":
-                drone.land()
+            # if json_msg["action"] == "takeoff":
+            #     drone.takeoff()
+            # if json_msg["action"] == "land":
+            #     drone.land()
+
+            # move_to_zone(drone,start_zone,drop_zone)
+
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             print(msg.error())
 
