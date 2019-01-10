@@ -9,45 +9,63 @@
   <link rel="stylesheet" href="{{url_for('static', filename='teits.css')}}">
 </head>
 <body> 
-  <div class="row">
-    <div class="col-md-7 drop" id="main_map">
-      {% for zone in zones %}
-        <div class="border-visible drag zone"
-             id="{{zone._id}}" 
-             style="position: absolute; height:{{zone.height}}px;width: {{zone.width}}px; top:{{zone.top}}px;left:{{zone.left}}px">
+  <div name="main" style="height: 100vh">
+    <div class="row h-100">
+      <div class="col-5 col-sm-5 col-md-7 col-lg-7 drop h-100" id="main_map">
+        {% for zone in zones %}
+          <div class="border-visible drag zone"
+               id="{{zone._id}}" 
+               style="position: absolute; height:{{zone.height}}%;width: {{zone.width}}%; top:{{zone.top}}%;left:{{zone.left}}%">
+          </div>
+        {% endfor %}
+      </div>
+      <div class="col-7 col-sm-7 col-md-5 col-lg-5 align-middle">
+        <div class="row">
+          <h4>Background image</h4>
+          <form method=post enctype=multipart/form-data>
+            <input class="btn btn-sm" type=file name=file>
+            <input class="btn btn-sm" type=submit value=Upload>
+          </form>
         </div>
-      {% endfor %}
-    </div>
-    <div class="col-md-5 align-middle">
-
-    <h4>Background image</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    <hr>
-    <h4>Edit drop zone</h1>
-      name: <input type="text" id="zone_name"><br>
-      width: <input type="text" id="zone_width"><br>
-      height: <input type="text" id="zone_height"><br>
-      top: <input type="text" id="zone_top"><br>
-      left: <input type="text" id="zone_left"><br>
-      <hr>
-      <h4> Zone positionning </h4>
-      x_position: <input type="text" id="zone_x"><br>
-      y_position: <input type="text" id="zone_y"><br>
-      x and y are positionning each zone using cartesian coordinates <br>
-      (x to the right, y to the front).<br>
-      x and y are in meters.<br>
-      At start time, drone are oriented to the front. <br>
-      <button id="zone_save">Save</button><button id="zone_delete">Delete</button>
+        <hr>
+        <div class="row">
+          <div class="col-6"><h4>Edit drop zone</h4></div>
+          <div class="col-3"><button id="zone_save">Save</button></div>
+          <div class="col-3"><button id="zone_delete">Delete</button></div>
+        </div>
+        <div class="row">
+          <div class="col-3">Name</div>
+          <div class="col-9"><input type="text" id="zone_name"></div>
+          </div>
+        <div class="row zone_settings">
+          <div class="col-3">Height %</div>
+          <div class="col-3"><input type="text" id="zone_height"></div>
+          <div class="col-3">Width %</div>
+          <div class="col-3"><input type="text" id="zone_width"></div>
+        </div>
+        <div class="row zone_settings">
+          <div class="col-3">Top %</div>
+          <div class="col-3"><input type="text" id="zone_top"></div>
+          <div class="col-3">Left %</div>
+          <div class="col-3"><input type="text" id="zone_left"></div>
+        </div>
+        <hr>
+        <div class="row">
+          <div class="col-5"><h4>Zone positioning</h4></div>
+          <div class="col-7 edit_instructions">
+            x and y (in meters) are positionning each zone using cartesian coordinates <br>
+            (x to the right, y to the front). At start time, drones are oriented to the front. <br> 
+          </div>
+        </div>
+        <div class="row zone_settings">
+          <div class="col-3">X m</div>
+          <div class="col-3"><input type="text" id="zone_x"></div>
+          <div class="col-3">Y m</div>
+          <div class="col-3"><input type="text" id="zone_y"></div>
+        </div>
+      </div>
     </div>
   </div>
-
-
-  
-
-
 </body>
 
   <script type="text/javascript" src="{{url_for('static', filename='jquery-1.12.4.js')}}"></script>

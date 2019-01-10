@@ -19,11 +19,25 @@ function set_drone_position(drone_id,drop_zone,action){
 
 function set_zone_position(zone_id,top,left){
     $.ajax({
-            url: 'update_zone_position',
+            url: 'set_zone_position',
             type: 'post',
             data: {"zone_id":zone_id,"top":top,"left":left},
             success:function(data){
                 console.log(data)
+            }
+        });
+}
+
+function update_zone_coordinates(zone_id){
+    $.ajax({
+            url: 'get_zone_coordinates',
+            type: 'post',
+            data: {"zone_id":zone_id},
+            success:function(data){
+                coordinates = JSON.parse(data);
+                console.log(coordinates)
+                $("#zone_x").val(coordinates.x);
+                $("#zone_y").val(coordinates.y);
             }
         });
 }
@@ -52,8 +66,10 @@ $('.drop.zone').click(function(e){
 $('#main_map.drop').droppable({
     drop : function(e,ui){
         var zone_id = ui.draggable.attr('id');
-        var top = ui.draggable.offset().top;
-        var left = ui.draggable.offset().left;
+        var top = ui.draggable.offset().top / ui.draggable.parent().height() * 100;
+        var left = ui.draggable.offset().left / ui.draggable.parent().width() * 100;
+        console.log(top);
+        console.log(left);
         set_zone_position(zone_id,top,left); 
     },
 }); 
@@ -171,109 +187,23 @@ $("#zone_delete").click(function(){
         });
 })
 
-$("#set_scene_width_button").click(function(){
-        $.ajax({
-            url: 'set_scene_width',
-            type: 'post',
-            data: {"scene_width":$("#scene_width").val()
-                    },
-            success:function(data){
-                console.log(data);
-                location.reload();
-            }
-        });
-})
-
 
 function update_zone_info(zone_id){
-    $("#zone_name").val($("#"+zone_id).attr("id"));
-    $("#zone_width").val($("#"+zone_id).width());
-    $("#zone_height").val($("#"+zone_id).height());
-    $("#zone_top").val($("#"+zone_id).offset().top);
-    $("#zone_left").val($("#"+zone_id).offset().left);
+    var zone_div = $("#"+zone_id);
+    $("#zone_name").val(zone_div.attr("id"));
+    $("#zone_height").val(Math.round(zone_div.height()/zone_div.parent().height()*100));
+    $("#zone_width").val(Math.round(zone_div.width()/zone_div.parent().width()*100));
+    $("#zone_top").val(Math.round(zone_div.offset().top/zone_div.parent().height()*100));
+    $("#zone_left").val(Math.round(zone_div.offset().left/zone_div.parent().width()*100));
 }
 
 $(".zone.drag").click(function(){
     console.log("update");
-    update_zone_info($(this).attr("id"));
+    var zone_id = $(this).attr("id")
+    update_zone_info(zone_id);
+    update_zone_coordinates(zone_id);
 })
 
-$( document ).ready(function(){
-/*  display_streams();
-  display_countries();
-  update_country_charts();*/
-});
 
 
-
-
-
-var active_streams = [];
-var deployed_countries = [];
-
-
-function contains(array,string){
-    var in_array = false; 
-    for (var i=0;i<array.length;i++){
-        if (array[i]==string){
-            in_array = true;
-            break;
-        }
-    }
-    return in_array;
-}
-
-
-$('#recycle').droppable({
-  drop : function(e,ui){
-        var zone = ui.draggable.attr('id').split("_")[0];
-        $("#"+zone+"_docker_image").hide();
-        $.ajax({
-              url: 'remove_country',
-              type: 'post',
-              data: {"country":zone},
-              success:function(data){
-                console.log(zone + " container stopped")
-                $("#"+zone+"_chart").remove();
-              }
-          });
-    }
-}); // ce bloc servira de zone de dépôt
-
-
-
-
-function display_streams(){
-    $.ajax({
-        url: 'get_active_streams',
-        type: 'get',
-        success:function(data){
-            var current_streams = JSON.parse(data);
-            console.log(current_streams);
-            // Iterate over object
-            $.each(current_streams,function(index,value){
-                // get chart
-                if (contains(active_streams,value)){
-                  $("#" + value + "_streams").show();
-                }
-            });
-            $.each(active_streams,function(index,value){
-                // get chart
-                if (!contains(current_streams,value)){
-                  $("#" + value + "_streams").hide();
-                }
-            });
-            active_streams = current_streams;
-            if (active_streams.length>0){
-              $("#replicate_streams").show();
-            }else{
-              $("#replicate_streams").hide();
-              $("#global_streams").hide();
-            }
-            setTimeout(function(){
-                display_streams();
-              }, 1000);
-        }
-    });
-}
 

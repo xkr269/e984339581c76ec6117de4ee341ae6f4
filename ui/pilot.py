@@ -68,11 +68,6 @@ test_stream(VIDEO_STREAM)
 test_stream(POSITIONS_STREAM)
 
 
-file = None
-write_header = True
-tello_address = ('192.168.10.1', 8889)
-
-
 # Function for transfering the video frames to FS and Stream
 def get_drone_video(drone):
     global FPS
@@ -101,9 +96,7 @@ def get_drone_video(drone):
                 # Print stats every second
                 elapsed_time = time.time() - start_time
                 if int(elapsed_time) != current_sec:
-                    # print("Elapsed : {} s, received {} fps , sent {} fps".format(elapsed_time,received_frames,sent_frames))
-                    # sys.stdout.write("Elapsed : {} s, received {} fps , sent {} fps                 \r".format(elapsed_time,received_frames,sent_frames))
-                    # sys.stdout.flush()
+                    print("Elapsed : {} s, received {} fps , sent {} fps".format(elapsed_time,received_frames,sent_frames))
                     received_frames = 0
                     sent_frames = 0
                     current_sec = int(elapsed_time)

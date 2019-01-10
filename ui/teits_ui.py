@@ -35,7 +35,6 @@ PROJECT_FOLDER = "/teits"
 ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
 
 ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
-SCENE_TABLE = ROOT_PATH + '/scene_table'   # Scene table path
 
 POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
 
@@ -49,7 +48,6 @@ connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
-scene_table = connection.get_or_create_store(SCENE_TABLE)
 
 
 UPLOAD_FOLDER = 'static'
@@ -224,7 +222,7 @@ def video_stream(drone_id):
 
 
 ###################################
-#####       SCENE EDITOR      #####
+#####          EDITOR         #####
 ###################################
 
 
@@ -245,24 +243,29 @@ def edit():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
 
-  try:
-    scene_width = scene_table.find_by_id("scene")["width"]
-  except:
-    scene_width = 1
-  return render_template("edit_ui.html",zones=zones_table.find(),scene_width=scene_width)
+  return render_template("edit_ui.html",zones=zones_table.find())
 
 @app.route('/save_zone',methods=['POST'])
 def save_zone():
   name = request.form['zone_name']
-  width = request.form['zone_width']
   height = request.form['zone_height']
+  width = request.form['zone_width']
   top = request.form['zone_top']
   left = request.form['zone_left']
   x = request.form['zone_x']
   y = request.form['zone_y']
   zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
+  print(zone_doc)
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
+
+@app.route('/get_zone_coordinates',methods=['POST'])
+def get_zone_coordinates():
+  zone_id = request.form['zone_id']
+  zone_doc = zones_table.find_by_id(_id=zone_id)
+
+  return json.dumps({"x":zone_doc["x"],"y":zone_doc["y"]})
+
 
 @app.route('/delete_zone',methods=['POST'])
 def delete_zone():
@@ -270,19 +273,12 @@ def delete_zone():
   zones_table.delete(_id=name)
   return "{} Deleted".format(name)
 
-@app.route('/set_scene_width',methods=['POST'])
-def set_scene_width():
-  width = request.form['scene_width']
-  scene_doc = {"_id":"scene","width":width}
-  scene_table.insert_or_replace(doc=scene_doc)
-  return "Width set"
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/update_zone_position',methods=["POST"])
-def update_zone_position():
+@app.route('/set_zone_position',methods=["POST"])
+def set_zone_position():
   zone_id = request.form["zone_id"]
   top = request.form["top"]
   left = request.form["left"]
