@@ -55,7 +55,7 @@ $('.drop.zone').click(function(e){
     $('#drone_1').animate({
             top : e.pageY - 44,
             left: e.pageX - 35
-            }, 1000, function() {
+            }, 2000, function() {
                 var drop_zone = e.target.id;
                 var drone_id = "drone_1";
                 set_drone_position(drone_id,drop_zone);  
@@ -155,7 +155,7 @@ function patrol(){
     if(patrol_in_progess){
         setTimeout(function(){
                     patrol();
-                  }, 3000);
+                  }, 7000);
     }
 }
 
