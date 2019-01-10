@@ -164,24 +164,17 @@ def set_drone_position():
 
   try:
     current_position = positions_table.find_by_id(drone_id)
+    print(current_position)
     from_zone = current_position["zone"]
     current_status = current_position["status"]
   except:
     from_zone = "home_base"
     current_status = "landed"
 
-  if action == "takeoff":
-    status = "flying"
-  elif action == "land":
-    status = "landed"
-  else:
-    status = current_status
-
-  if from_zone != drop_zone and status == "landed":
+  if from_zone != drop_zone and current_status == "landed":
     action = "takeoff"
-
-  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone, "status":status})
-  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone,"action":action}
+  message = {"drone_id":drone_id,"drop_zone":drop_zone,"action":action}
+  print(message)
   positions_producer.produce(drone_id, json.dumps(message))
   return "{} moved from zone {} to zone {} then {}".format(drone_id,from_zone,drop_zone,action)
 
