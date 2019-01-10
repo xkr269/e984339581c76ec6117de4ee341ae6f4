@@ -139,13 +139,13 @@ def main():
     drone.connect()
     drone.wait_for_connection(60)
 
-    # # create video thread
-    # videoThread = threading.Thread(target=get_drone_video,args=[drone])
-    # videoThread.start()
+    # create video thread
+    videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    videoThread.start()
 
 
     start_time = time.time()
-    flight_time = 20 # seconds
+    flight_time = 300 # seconds
     consumer_group = randint(1000, 100000)
     positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
@@ -159,10 +159,12 @@ def main():
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             print(json_msg)
-            # if json_msg["action"] == "takeoff":
-            #     drone.takeoff()
-            # if json_msg["action"] == "land":
-            #     drone.land()
+            if json_msg["action"] == "takeoff":
+                print("Takeoff")
+                #drone.takeoff()
+            if json_msg["action"] == "land":
+                print("Land")
+                # drone.land()
 
             # move_to_zone(drone,start_zone,drop_zone)
 
