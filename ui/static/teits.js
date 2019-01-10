@@ -88,13 +88,15 @@ function move_to_position(drone_id,zone_id,action){
     drone_div.animate({
         top : position.top + height/2 - drone_div.height()/2,
         left: position.left + width/2 - drone_div.width()/2
-        }, 1000);
+        }, 2000);
     }
 
 $("#back_home_button").click(function(){
     $(".drone").each(function(){
+        console.log("Stop patrolling");
         patrol_in_progess = false;
-        move_to_position($(this).attr("id"),"home_base","land")
+        console.log($(this).css('display'));
+        if($(this).css('display')!='none'){move_to_position($(this).attr("id"),"home_base","land");}
     })
 })
 
@@ -120,6 +122,7 @@ $("#new_drone_button").click(function(){
 
 
 $("#patrol_button").click(function(){
+    console.log("Start patroling");
     patrol_in_progess = true;
     patrol();
 })
@@ -142,15 +145,18 @@ function move_to_next_waypoint(drone_id){
 }
 
 function patrol(){
+    console.log("Patroling");
     $(".drone").each(function(){
         var drone_id = $(this).attr("id")
-        if(patrol_in_progess){
+        if(patrol_in_progess && $(this).css('display')!='none'){
             move_to_next_waypoint(drone_id);
         }
     })
-    setTimeout(function(){
-                patrol();
-              }, 3000);
+    if(patrol_in_progess){
+        setTimeout(function(){
+                    patrol();
+                  }, 3000);
+    }
 }
 
 

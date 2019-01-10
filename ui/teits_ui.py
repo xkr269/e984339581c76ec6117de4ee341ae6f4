@@ -177,6 +177,9 @@ def set_drone_position():
   else:
     status = current_status
 
+  if from_zone != drop_zone and status == "landed":
+    action = "takeoff"
+
   positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone, "status":status})
   message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone,"action":action}
   positions_producer.produce(drone_id, json.dumps(message))

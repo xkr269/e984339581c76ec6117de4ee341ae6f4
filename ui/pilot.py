@@ -26,6 +26,7 @@ import av
 import tellopy
 import json
 import threading
+from random import randint
 from confluent_kafka import Producer, Consumer, KafkaError
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 
@@ -40,7 +41,7 @@ def get_cluster_name():
     first_line = f.readline()
     return first_line.split(' ')[0]
 
-def test_stream(stream_path):
+def create_stream(stream_path):
   if not os.path.islink(stream_path):
     print("stream {} is missing. Exiting.".format(stream_path))
     sys.exit()
@@ -63,9 +64,9 @@ zones_table = connection.get_or_create_store(ZONES_TABLE)
 if not os.path.exists(IMAGE_FOLDER):
     os.makedirs(IMAGE_FOLDER)
 
-# test if streams exist and create them if needed
-test_stream(VIDEO_STREAM)
-test_stream(POSITIONS_STREAM)
+# create sreams if needed
+create_stream(VIDEO_STREAM)
+create_stream(POSITIONS_STREAM)
 
 
 # Function for transfering the video frames to FS and Stream
@@ -138,15 +139,15 @@ def main():
     drone.connect()
     drone.wait_for_connection(60)
 
-    # create video thread
-    videoThread = threading.Thread(target=get_drone_video,args=[drone])
-    videoThread.start()
+    # # create video thread
+    # videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    # videoThread.start()
 
 
     start_time = time.time()
-    flight_time = 180 # seconds
-
-    positions_consumer = Consumer({'group.id': "default",'default.topic.config': {'auto.offset.reset': 'latest'}})
+    flight_time = 20 # seconds
+    consumer_group = randint(1000, 100000)
+    positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
 
     while True:

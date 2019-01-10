@@ -2,6 +2,12 @@ body {
     overflow:hidden;
 }
 
+#main {
+  height: 100vh;
+/*  position: absolute;
+*/}
+
+
 #main_map {
     color:black;
     background-image:url(background);
@@ -26,14 +32,17 @@ body {
 }
 
 .drone {
-  position: relative;
+
+  position: absolute;
   top: 10%;
   left: 10%;
   width: 10%;
   height: 10%;
   background-image: url(drone.png);
+  background-size: auto;
   background-size: cover;
   z-index: 100;
+  display: none;
 }
 
 
