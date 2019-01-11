@@ -210,6 +210,42 @@ $(".zone.drag").click(function(){
     update_zone_coordinates(zone_id);
 })
 
+$( document ).ready(function() {
+    var hb = $("#home_base");
+    var hb_top = hb.offset().top;
+    var hb_left = hb.offset().left;
+    var hb_height = hb.height();
+    var hb_width = hb.width();
+    $(".drone").each(function(){
+        $(this).css({top: hb_top + hb_height/2 - $(this).height()/2,
+                     left: hb_left + hb_width/2 - $(this).width()/2,
+                     position: 'absolute'});
+        });
+    $(".battery").each(function(){
+        set_battery($(this));
+    });
+});
 
+$("body").on('DOMSubtreeModified', ".battery", function() {
+    set_battery($(this));
+});
 
-
+function set_battery(element){
+    var battery_pct = parseInt(element.text().slice(0,-1));
+    
+    if(battery_pct > 75){
+        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_100.png)");
+    } 
+    else if(battery_pct > 50){
+        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_75.png)");
+    } 
+    else if(battery_pct > 25){
+        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_50.png)");
+    } 
+    else if(battery_pct > 15){
+        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_25.png)");
+    }
+    else {
+        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_15.png)");
+    }
+}

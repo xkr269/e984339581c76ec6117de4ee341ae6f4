@@ -9,7 +9,6 @@ import threading
 import socket
 import sys
 import time
-import tellopy
 
 
 host = ''

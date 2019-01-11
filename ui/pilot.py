@@ -17,7 +17,7 @@ What has to be defined :
 
 """
 
-
+import traceback
 import time
 from time import sleep
 import os
@@ -29,23 +29,24 @@ import threading
 from random import randint
 from confluent_kafka import Producer, Consumer, KafkaError
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
-from math import atan2, sqrt, pi
+from math import atan2, sqrt, pi, floor
 
 
 DRONE_ID = sys.argv[1]
 FPS = 10.0
 PROJECT_FOLDER = "/teits"
-LINEAR_MODE = True # If True, drone will move laterally and not turn. If False, drone will turn then move forward
-FORWARD_COEF = 2 # Time taken to move 1m
-ANGULAR_COEF = 10 # Time taken to rotate 360 deg
+DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
+FORWARD_COEF = 3 # Time taken to move 1m
+ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
 MAX_FLIGHT_TIME = 300 # seconds
+
 
 def get_cluster_name():
   with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
     return first_line.split(' ')[0]
 
-def create_stream(stream_path):
+def check_stream(stream_path):
   if not os.path.islink(stream_path):
     print("stream {} is missing. Exiting.".format(stream_path))
     sys.exit()
@@ -57,8 +58,11 @@ ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
 IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
 VIDEO_STREAM = ROOT_PATH + "/video_stream"
 POSITIONS_STREAM = ROOT_PATH + "/positions_stream"
+FLIGHT_DATA_STREAM = ROOT_PATH + "/flight_data_stream"
 ZONES_TABLE = ROOT_PATH + "/zones_table"
 POSITIONS_TABLE = ROOT_PATH + "/positions_table"
+
+current_angle = 0
 
 # Create database connection
 connection_str = "10.0.0.11:5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -71,9 +75,13 @@ if not os.path.exists(IMAGE_FOLDER):
     os.makedirs(IMAGE_FOLDER)
 
 # create sreams if needed
-create_stream(VIDEO_STREAM)
-create_stream(POSITIONS_STREAM)
+check_stream(VIDEO_STREAM)
+check_stream(POSITIONS_STREAM)
+check_stream(FLIGHT_DATA_STREAM)
 
+
+
+#######################    VIDEO PROCESSING    ##################
 
 # Function for transfering the video frames to FS and Stream
 def get_drone_video(drone):
@@ -113,8 +121,10 @@ def get_drone_video(drone):
         print(ex)
 
 
+#######################    MOVE PROCESSING    ##################
 
 def move_to_zone(drone,start_zone,drop_zone):
+    global current_angle
     print("###############      moving from {} to {}".format(start_zone,drop_zone))
     # get start_zone coordinates
     current_position_document = zones_table.find_by_id(start_zone)
@@ -127,12 +137,13 @@ def move_to_zone(drone,start_zone,drop_zone):
     y = new_position[1] - current_position[1] # Back and Front
     x = new_position[0] - current_position[0] # Left and Right
 
-    if LINEAR_MODE :
+    if DIRECTIONAL_MODE == "LINEAR" :
         if y > 0:
             drone.forward(y)
         elif y < 0:
             drone.backward(-y)
         if y != 0:
+            print("Sleep {}".format(abs(FORWARD_COEF*y)))
             time.sleep(max(1,abs(FORWARD_COEF*y)))
 
         if x > 0:
@@ -140,42 +151,65 @@ def move_to_zone(drone,start_zone,drop_zone):
         elif x < 0:
             drone.left(-x)
         if x != 0:
+            print("Sleep {}".format(abs(FORWARD_COEF*x)))
             time.sleep(max(1,abs(FORWARD_COEF*x)))
     else:
-        # calcul angle de rotation vs axe x   
-        angle = (atan2(x,y)*180/pi + 180) % 360 -180
+        # calcul angle de rotation vs axe Y   
+        target_angle = (atan2(x,y)*180/pi + 180) % 360 - 180
+
+        print("drone orientation : {}".format(current_angle))
+        print("target angle : {}".format(target_angle))
+
+        angle =  (target_angle - current_angle + 180) % 360 - 180 
+        print("direction vs drone : {}".format(angle))
+
+        if DIRECTIONAL_MODE == "OPTIMIZED":
+            # calcul du cadran
+            cadran = int(floor(angle/45))
+            print("cadran = {}".format(cadran))
+
+            # calcul offset et deplacement
+            if cadran in [-1,0]:
+                offset = angle
+                move = drone.forward
+            elif cadran in [1,2]:
+                offset = angle - 90
+                move = drone.right
+            elif cadran in [-4,3]:
+                offset = (angle + 90) % 180 - 90
+                move = drone.backward
+            elif cadran in [-2,-3]:
+                offset = angle + 90
+                move = drone.left
+
+            print("offset : {}".format(offset))
+            print("move : {}".format(move))
+
+        elif DIRECTIONAL_MODE == "FORWARD":
+            move = drone.forward
+            offset = angle 
+            print("forward mode, offset : {}".format(offset))
+
         # distance a parcourir
         distance = sqrt(x*x + y*y)
-        reverse = False
 
-        if abs(angle) > 90:
-            reverse = True
-            angle = (angle + 90) % 180 - 90
+        print("distance : {}".format(distance))
 
-        # rotation
-        if abs(angle) > 0:
+        if abs(offset) > 0:
             print("###############      turning {} degrees".format(angle))
-            drone.turn(angle)
-            time.sleep(max(1,abs(angle) * ANGULAR_COEF / 360))
+            drone.turn(offset)
+            print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
+            time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
 
-        # deplacement
-        if reverse:
-            drone.backward(distance) # in m
-            print("###############      backward {} m".format(distance))
-        else:
-            drone.forward(distance) # in m
-            print("###############      forward {} m".format(distance))
-        
+        # deplacement        
         if distance > 0 :
-            time.sleep(max(1,distance * 2))
-        
-        # reset orentation
-        if abs(angle) > 0 :
-            print("###############      turning {} degrees".format(-angle))
-            drone.turn(-angle)
-            time.sleep(max(1,abs(angle) * ANGULAR_COEF / 360))
-    
-    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":drop_zone, "status":"flying"})
+            move(distance)
+            print("sleep {}".format(max(1,distance * FORWARD_COEF)))
+            time.sleep(max(1,distance * FORWARD_COEF))
+
+        current_angle += offset
+
+    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":drop_zone, "status":"flying", "offset":current_angle})
 
 
 def set_homebase():
@@ -183,16 +217,36 @@ def set_homebase():
     positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":"home_base", "status":"landed"})
 
 
+
+#######################    FLIGHT DATA  PROCESSING    ##################
+
+def handler(event, sender, data, **args):
+    drone = sender
+    flight_data_producer = Producer({'streams.producer.default.stream': FLIGHT_DATA_STREAM})
+    if event is drone.EVENT_FLIGHT_DATA:
+        pass
+        flight_data = {"battery":data.battery_percentage}
+        flight_data_producer.produce(DRONE_ID,json.dumps(flight_data))
+
+
+
+#######################         MAIN FUNCTION       ##################
+
 def main():
 
     drone = tellopy.Tello()
     set_homebase()
     drone.connect()
     drone.wait_for_connection(60)
+    # drone.set_loglevel("LOG_DEBUG")
+
+    # subscribe to flight data
+    # drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
 
     # create video thread
     videoThread = threading.Thread(target=get_drone_video,args=[drone])
     videoThread.start()
+
 
     start_time = time.time()
     consumer_group = randint(1000, 100000)
@@ -200,41 +254,46 @@ def main():
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
 
     while True:
-        print("polling")
-        msg = positions_consumer.poll()
-        if msg is None:
-            print("none")
-            continue
-        if not msg.error():
-            json_msg = json.loads(msg.value().decode('utf-8'))
-            print(json_msg)
-            from_zone = positions_table.find_by_id(DRONE_ID)["zone"]
-            drop_zone = json_msg["drop_zone"]
-            
-            if json_msg["action"] == "takeoff":
-                print("###############      Takeoff")
-                drone.takeoff()
-                time.sleep(5)
-                positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying"})
-
-            if drop_zone != from_zone:
-                move_to_zone(drone,from_zone,drop_zone)
-                print("###############      Moved")
+        try:
+            print("waiting for instructions")
+            msg = positions_consumer.poll()
+            if msg is None:
+                print("none")
+                continue
+            if not msg.error():
+                json_msg = json.loads(msg.value().decode('utf-8'))
+                print(json_msg)
+                from_zone = positions_table.find_by_id(DRONE_ID)["zone"]
+                drop_zone = json_msg["drop_zone"]
                 
-            if json_msg["action"] == "land":
-                print("###############      Land")
+                if json_msg["action"] == "takeoff":
+                    print("###############      Takeoff")
+                    drone.takeoff()
+                    time.sleep(5)
+                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying"})
+
+                if drop_zone != from_zone:
+                    move_to_zone(drone,from_zone,drop_zone)
+                    print("###############      Moved")
+                    
+                if json_msg["action"] == "land":
+                    print("###############      Land")
+                    drone.land()
+                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed"})
+                    time.sleep(5)
+
+            elif msg.error().code() != KafkaError._PARTITION_EOF:
+                print(msg.error())
+
+            if time.time() > start_time + MAX_FLIGHT_TIME:
+                print("Time expired - Landing")
                 drone.land()
-                positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed"})
                 time.sleep(5)
-
-        elif msg.error().code() != KafkaError._PARTITION_EOF:
-            print(msg.error())
-
-        if time.time() > start_time + MAX_FLIGHT_TIME:
-            print("Time expired - Landing")
-            drone.land()
-            time.sleep(5)
-            break
+                break
+        except Exception as ex:
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            print(ex)
+            traceback.print_exc()
 
 
     drone.quit()

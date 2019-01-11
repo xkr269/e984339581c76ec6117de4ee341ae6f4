@@ -1,3 +1,9 @@
+.border-visible {
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+}
+
 body {
     overflow:hidden;
 }
@@ -6,7 +12,6 @@ body {
   height: 100vh;
 /*  position: absolute;
 */}
-
 
 #main_map {
     color:black;
@@ -17,49 +22,22 @@ body {
     width: 100%;
 }
 
-.border-visible {
-  border-color: black;
-  border-width: 1px;
-  border-style: solid;
-}
-
-.zone_settings input {
-  width: 80%;
-}
-
-.edit_instructions {
-  font-size: 10px;
-}
-
 .drone {
-
   position: absolute;
-  top: 10%;
-  left: 10%;
   width: 10%;
   height: 10%;
   background-image: url(drone.png);
   background-size: auto;
-  background-size: cover;
   z-index: 100;
   display: none;
 }
 
 
-.drone_ui  {
-  height: 25%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+#control_panel {
 
-
-.drone_video  {
-  height: 100%;
 }
 
 #command_buttons div {
-/*  height: 60px;*/
   text-align: center;
   line-height:60px;
 }
@@ -67,4 +45,90 @@ body {
 #command_buttons button {
   vertical-align: middle;
   line-height: 20px;
+}
+
+
+.drone_ui  {
+  position: relative;
+  height: 30%;
+  /*display: none;*/
+}
+
+.drone_info {
+  background-image: url(coyote_empty.png);
+  background-size: contain;
+  background-repeat:no-repeat;
+  background-position: center; 
+  text-align: center;
+}
+
+.count {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 8vh;
+  font-weight: bold;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.battery {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 3vh;
+  top: 75%;
+  left: 30%;
+  transform: translate(-50%,0);
+}
+
+.battery_gauge {
+  background-size: contain;
+  background-repeat:no-repeat;
+  background-position: center;
+  height: 100%;
+}
+
+.battery_100{
+    background-image: url(battery_100.png);
+}
+.battery_75{
+    background-image: url(battery_75.png);
+}
+.battery_50{
+    background-image: url(battery_50.png);
+}
+.battery_25{
+    background-image: url(battery_25.png);
+}
+
+.battery_15{
+    background-image: url(battery_15.png);
+}
+
+
+
+.speed {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 3vh;
+  top: 75%;
+  left: 70%;
+  transform: translate(-50%,0);
+}
+
+
+
+
+.drone_video  {
+  height: 100%;
+}
+
+
+
+.zone_settings input {
+  width: 80%;
+}
+
+.edit_instructions {
+  font-size: 10px;
 }
