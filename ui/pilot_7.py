@@ -32,8 +32,9 @@ from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from math import atan2, sqrt, pi, floor
 
 
+FLIGHT_MODE = False
 DRONE_ID = sys.argv[1]
-FPS = 10.0
+FPS = 20.0
 PROJECT_FOLDER = "/teits"
 DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
 FORWARD_COEF = 3 # Time taken to move 1m
@@ -202,15 +203,17 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         if abs(offset) > 0:
             print("###############      turning {} degrees".format(angle))
-            drone.turn(offset)
-            print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
-            time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
+            if FLIGHT_MODE:
+                drone.turn(offset)
+                print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
+                time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
 
         # deplacement        
         if distance > 0 :
-            move(distance)
-            print("sleep {}".format(max(1,distance * FORWARD_COEF)))
-            time.sleep(max(1,distance * FORWARD_COEF))
+            if FLIGHT_MODE:
+                move(distance)
+                print("sleep {}".format(max(1,distance * FORWARD_COEF)))
+                time.sleep(max(1,distance * FORWARD_COEF))
 
         current_angle += offset
 
@@ -227,22 +230,22 @@ def set_homebase():
 
 def handler(event, sender, data, **args):
     drone = sender
-    # if event is drone.EVENT_LOG_DATA:
-    #     log_data_doc = {"mvo":{"vel_x":data.mvo.vel_x,
-    #                            "vel_y":data.mvo.vel_y,
-    #                            "vel_z":data.mvo.vel_z,
-    #                            "pos_x":data.mvo.pos_x,
-    #                            "pos_y":data.mvo.pos_y,
-    #                            "pos_z":data.mvo.pos_z},
-    #                     "imu":{"acc_x":data.imu.acc_x,
-    #                            "acc_y":data.imu.acc_y,
-    #                            "acc_z":data.imu.acc_z,
-    #                            "gyro_x":data.imu.gyro_x,
-    #                            "gyro_y":data.imu.gyro_y,
-    #                            "gyro_z":data.imu.gyro_z}}
-    #     mutation = {'$put': {'log_data': log_data_doc}}
-    #     dronedata_table.update(_id=DRONE_ID,mutation=mutation)
-    #     # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
+    if event is drone.EVENT_LOG_DATA:
+        log_data_doc = {"mvo":{"vel_x":data.mvo.vel_x,
+                               "vel_y":data.mvo.vel_y,
+                               "vel_z":data.mvo.vel_z,
+                               "pos_x":data.mvo.pos_x,
+                               "pos_y":data.mvo.pos_y,
+                               "pos_z":data.mvo.pos_z},
+                        "imu":{"acc_x":data.imu.acc_x,
+                               "acc_y":data.imu.acc_y,
+                               "acc_z":data.imu.acc_z,
+                               "gyro_x":data.imu.gyro_x,
+                               "gyro_y":data.imu.gyro_y,
+                               "gyro_z":data.imu.gyro_z}}
+        mutation = {'$put': {'log_data': log_data_doc}}
+        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+        # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
 
 
     if event is drone.EVENT_FLIGHT_DATA:
@@ -258,6 +261,7 @@ def handler(event, sender, data, **args):
 #######################       MAIN FUNCTION       ##################
 
 def main():
+
 
     drone = tellopy.Tello()
     set_homebase() # reset drone position in the positions table
@@ -277,7 +281,7 @@ def main():
 
 
     start_time = time.time()
-    consumer_group = randint(1000, 100000)
+    consumer_group = str(time.time)
     positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
 
@@ -296,8 +300,9 @@ def main():
                 
                 if json_msg["action"] == "takeoff":
                     print("###############      Takeoff")
-                    drone.takeoff()
-                    time.sleep(5)
+                    if FLIGHT_MODE:
+                        drone.takeoff()
+                        time.sleep(5)
                     positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying"})
 
                 if drop_zone != from_zone:
@@ -306,9 +311,10 @@ def main():
                     
                 if json_msg["action"] == "land":
                     print("###############      Land")
-                    drone.land()
                     positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed"})
-                    time.sleep(5)
+                    if FLIGHT_MODE:
+                        drone.land()
+                        time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:
                 print(msg.error())

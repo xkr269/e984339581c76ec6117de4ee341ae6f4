@@ -22,6 +22,9 @@
         <div class="border-visible drag drone" id="drone_2" ></div>
         <div class="border-visible drag drone" id="drone_3" ></div>
       </div>
+
+
+
       <div class="col-7 col-sm-7 col-md-5 col-lg-5" id="control_panel">
         <div class="row" id="command_buttons">
           <div class="col-4 col-sm-4 col-md-4 col-lg-4">
@@ -35,21 +38,21 @@
           </div>      
         </div> 
         <div class="row drone_ui border-visible" id="drone_1_ui">
-          <div class="col-4 drone_info">
-            <div class="count" id="drone_1_count">17</div>
-            <div class="battery" id="drone_1_battery">92%</div>
+          <div class="col-6 drone_info" drone_id="drone_1">
+            <div class="count" id="drone_1_count">-</div>
+            <div class="battery_pct" id="drone_1_battery">92%</div>
             <div class="battery_gauge" id="drone_1_battery_gauge"></div>
             <div class="speed" id="drone_1_speed">15m/s</div>
             <div class="speed_gauge" id="drone_1_speed_gauge"></div>
           </div>
-          <div class="col-8">
+          <div class="col-6">
             <img src="video_stream/drone_1" class="drone_video">
           </div>
         </div>
         <div class="row drone_ui border-visible" id="drone_2_ui">
-          <div class="col-4 drone_info">
-            <div class="count" id="drone_2_count">34</div>
-            <div class="battery" id="drone_2_battery">24%</div>
+          <div class="col-4 drone_info" drone_id="drone_2">
+            <div class="count" id="drone_2_count">-</div>
+            <div class="battery_pct" id="drone_2_battery">24%</div>
             <div class="battery_gauge" id="drone_2_battery_gauge"></div>
             <div class="speed" id="drone_2_speed">5m/s</div>
             <div class="speed_gauge" id="drone_2_speed_gauge"></div>
@@ -59,9 +62,9 @@
           </div>
         </div>
         <div class="row drone_ui border-visible" id="drone_3_ui">
-          <div class="col-4 drone_info">
-            <div class="count" id="drone_3_count">9</div>
-            <div class="battery" id="drone_3_battery">12%</div>
+          <div class="col-4 drone_info" drone_id="drone_3">
+            <div class="count" id="drone_3_count">-</div>
+            <div class="battery_pct" id="drone_3_battery">12%</div>
             <div class="battery_gauge" id="drone_3_battery_gauge"></div>
             <div class="speed" id="drone_3_speed">7m/s</div>
             <div class="speed_gauge" id="drone_3_speed_gauge"></div>

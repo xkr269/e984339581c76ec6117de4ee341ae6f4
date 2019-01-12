@@ -1,11 +1,13 @@
 #! /usr/bin/python
 
 import logging
+import math
 import io
 import os
 import json
 import time
 import argparse
+import traceback
 from random import randint
 from werkzeug.utils import secure_filename
 
@@ -38,6 +40,9 @@ ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
 
 POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
 
+DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores positions information
+
+
 VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
 OFFSET_RESET_MODE = 'latest'
@@ -48,6 +53,7 @@ connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
+dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 
 
 UPLOAD_FOLDER = 'static'
@@ -100,7 +106,7 @@ def stream_video(drone_id):
     global OFFSET_RESET_MODE
     running = True
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
-    consumer_group = randint(3000, 3999)
+    consumer_group = str(time.time)
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
     consumer.subscribe([VIDEO_STREAM+":"+drone_id])
     while running:
@@ -109,10 +115,10 @@ def stream_video(drone_id):
             print('  Message is None')
             continue
         if not msg.error():
-            print(msg.value().decode('utf-8'))
+            # print(msg.value().decode('utf-8'))
             json_msg = json.loads(msg.value().decode('utf-8'))
             frameId = json_msg['index']
-            print('Message is valid, sending frame ' + str(frameId))
+            # print('Message is valid, sending frame ' + str(frameId))
             try:
               image_name = ROOT_PATH + "/" + drone_id + "/images/source/frame-{}.jpg".format(frameId)
               with open(image_name, "rb") as imageFile:
@@ -164,7 +170,6 @@ def set_drone_position():
 
   try:
     current_position = positions_table.find_by_id(drone_id)
-    print(current_position)
     from_zone = current_position["zone"]
     current_status = current_position["status"]
   except:
@@ -215,6 +220,63 @@ def video_stream(drone_id):
   return Response(stream_video(drone_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@app.route('/get_battery_pct',methods=["POST"])
+def get_battery_pct():
+  drone_id = request.form["drone_id"]
+  try:
+    battery = dronedata_table.find_by_id(drone_id)["flight_data"]["battery"]
+  except:
+    battery = "-"
+  return battery
+
+
+@app.route('/get_log_data',methods=["POST"])
+def get_log_data():
+  drone_id = request.form["drone_id"]
+  try:
+    log_data = dronedata_table.find_by_id(drone_id)["log_data"]
+  except:
+    log_data = "no log data"
+  return json.dumps(log_data)
+
+
+@app.route('/get_speed',methods=["POST"])
+def get_speed():
+  drone_id = request.form["drone_id"]
+  if drone_id == "drone_1":
+    try:
+      # log_data = dronedata_table.find_by_id(drone_id)["log_data"]
+      # print(log_data)
+      # if log_data == "unset":
+      #   vel_x = 0
+      #   vel_y = 0
+      # else:
+      #   vel_x = float(log_data["mvo"]["vel_x"])
+      #   vel_y = float(log_data["mvo"]["vel_y"])
+      # speed = math.sqrt(vel_x * vel_x + vel_y*vel_y)
+      speed = float(dronedata_table.find_by_id(drone_id)["flight_data"]["fly_speed"])
+    except Exception as ex:
+      print(ex)
+      traceback.print_exc()
+      speed = 0.0
+    # print(speed)
+    return str(round(speed,2))
+  return "0"
+
+
+@app.route('/get_count',methods=["POST"])
+def get_count():
+  drone_id = request.form["drone_id"]
+  if drone_id == "drone_1":
+    # print(dronedata_table.find_by_id(drone_id))
+    try:
+      count = dronedata_table.find_by_id(drone_id)["count"]
+    except Exception as ex:
+      print(ex)
+      traceback.print_exc()
+      count = 0
+    return str(count)
+  return "0"
 
 
 ###################################
@@ -251,7 +313,7 @@ def save_zone():
   x = request.form['zone_x']
   y = request.form['zone_y']
   zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
-  print(zone_doc)
+  # print(zone_doc)
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
 

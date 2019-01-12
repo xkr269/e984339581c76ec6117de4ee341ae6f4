@@ -1,3 +1,11 @@
+var DISPLAY_COUNT_TIMER = 1000
+var DISPLAY_SPEED_TIMER = 1000
+var DISPLAY_BATTERY_TIMER = 5000
+var PATROL_TIMER = 5000
+
+
+
+
 patrol_in_progess = false;
 
 $(function(){
@@ -155,7 +163,7 @@ function patrol(){
     if(patrol_in_progess){
         setTimeout(function(){
                     patrol();
-                  }, 7000);
+                  }, PATROL_TIMER);
     }
 }
 
@@ -221,14 +229,88 @@ $( document ).ready(function() {
                      left: hb_left + hb_width/2 - $(this).width()/2,
                      position: 'absolute'});
         });
-    $(".battery").each(function(){
-        set_battery($(this));
-    });
+    $(".drone_ui").each(function(){if($(this).attr("id") != "drone_1_ui"){$(this).hide();}});
+    $(".drone").each(function(){$(this).hide();});
+    update_battery();
+    update_speed();
+    update_count();
 });
 
-$("body").on('DOMSubtreeModified', ".battery", function() {
-    set_battery($(this));
-});
+function update_battery(){
+    $(".drone_info").each(function(){
+        var drone_info_div = $(this);
+        $.ajax({
+            url: 'get_battery_pct',
+            type: 'post',
+            data: {"drone_id":drone_info_div.attr("drone_id")},
+            success:function(data){
+                drone_info_div.children(".battery_pct").text(data+"%");
+                set_battery(drone_info_div.children(".battery_pct"));
+            }
+        });
+    });
+    setTimeout(function(){
+            update_battery();
+          }, DISPLAY_BATTERY_TIMER);
+
+}
+
+function update_speed(){
+    $(".drone_info").each(function(){
+        var drone_info_div = $(this);
+        $.ajax({
+            url: 'get_speed',
+            type: 'post',
+            data: {"drone_id":drone_info_div.attr("drone_id")},
+            success:function(data){
+                drone_info_div.children(".speed").text(data + " m/s");
+            }
+        });
+    });
+    setTimeout(function(){
+            update_speed();
+          }, DISPLAY_SPEED_TIMER);
+
+}
+
+
+function update_count(){
+    $(".drone_info").each(function(){
+        var drone_info_div = $(this);
+        $.ajax({
+            url: 'get_count',
+            type: 'post',
+            data: {"drone_id":drone_info_div.attr("drone_id")},
+            success:function(data){
+                drone_info_div.children(".count").text(data);
+            }
+        });
+    });
+    setTimeout(function(){
+            update_count();
+          }, DISPLAY_COUNT_TIMER);
+
+}
+
+
+function update_log_data(){
+    $(".drone_info").each(function(){
+        $.ajax({
+            url: 'get_log_data',
+            type: 'post',
+            data: {"drone_id":$(this).attr("drone_id")},
+            success:function(data){
+                $(this).children(".log_data").text(data);
+            }
+        });
+    });
+
+    setTimeout(function(){
+            update_log_data();
+          }, 100);
+}
+
+
 
 function set_battery(element){
     var battery_pct = parseInt(element.text().slice(0,-1));
