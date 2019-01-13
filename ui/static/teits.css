@@ -1,3 +1,13 @@
+@font-face {
+  font-family: nidus;
+  src: url('nidsans-webfont.eot'); /* IE9 Compat Modes */
+  src: url('nidsans-webfont.woff2') format('woff2'), /* Super Modern Browsers */
+     url('nidsans-webfont.woff') format('woff'), /* Pretty Modern Browsers */
+     url('nidsans-webfont.ttf')  format('truetype'), /* Safari, Android, iOS */
+   url('nidsans-webfont.svg') format('svg'); /* Legacy iOS */
+}
+
+
 .border-visible {
   border-color: black;
   border-width: 0px;
@@ -59,7 +69,8 @@ body {
   background-image: url(coyote_empty.png);
   background-size: contain;
   background-repeat:no-repeat;
-  background-position: center; 
+  background-position: center;
+  background-color:   black;
   text-align: center;
   height: 100%;
   width: auto; 
@@ -97,6 +108,7 @@ body {
   color: #6CFC5F;
   font-size: 10vh;
   font-weight: bold;
+  font-family:  nidus;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -75%);
@@ -106,6 +118,7 @@ body {
   position: absolute;
   color: #6CFC5F;
   font-size: 5vh;
+  font-family:  nidus;
   top: 50%;
   left: 50%;
   transform: translate(-200%,200%); /* left, top , in % of current div */
@@ -115,18 +128,18 @@ body {
   position: absolute;
   color: #6CFC5F;
   font-size: 5vh;
+  font-family:  nidus;
   top: 50%;
   left: 50%;
-  transform: translate(40%,200%); /* left, top , in % of current div */
+  transform: translate(150%,200%); /* left, top , in % of current div */
 }
-
-
 
 
 .drone_video  {
   height: 100%;
+  max-width:  90%;
+  background-color:   black;
 }
-
 
 
 .zone_settings input {

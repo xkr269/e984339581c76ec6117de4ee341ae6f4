@@ -263,7 +263,7 @@ function update_speed(){
             type: 'post',
             data: {"drone_id":drone_info_div.attr("drone_id")},
             success:function(data){
-                drone_info_div.children(".speed").text(data + " m/s");
+                drone_info_div.children(".speed").text(data);
             }
         });
     });

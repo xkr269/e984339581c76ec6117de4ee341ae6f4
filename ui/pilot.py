@@ -33,7 +33,7 @@ from math import atan2, sqrt, pi, floor
 
 
 DRONE_ID = sys.argv[1]
-FPS = 10.0
+FPS = 5.0
 PROJECT_FOLDER = "/teits"
 DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
 FORWARD_COEF = 3 # Time taken to move 1m
@@ -109,7 +109,7 @@ def get_drone_video(drone):
                 if current_time > (last_frame_time + float(1/FPS)):
                     print(frame)
                     frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
-                    video_producer.produce(DRONE_ID, json.dumps({"index":frame.index}))
+                    video_producer.produce(DRONE_ID+"_raw", json.dumps({"index":frame.index,"image":IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)}))
                     sent_frames += 1
                     last_frame_time = time.time()
 

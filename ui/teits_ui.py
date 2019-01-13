@@ -40,13 +40,14 @@ ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
 
 POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
 
-DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores positions information
+DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores drone data
 
 
 VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
-OFFSET_RESET_MODE = 'latest'
-
+OFFSET_RESET_MODE = 'latest' # earliest or latest
+VIDEO_SLEEP_TIME = 0.1 # in second, used as speed control for re playing existing video
+DISPLAY_STREAM_NAME = "faces" # "raw" for original images, "faces" for face detection 
 
 # Create database connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -59,7 +60,6 @@ dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 UPLOAD_FOLDER = 'static'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
-video_sleep_time = 0
   
 if args.reset:
   # Reset positions stream
@@ -104,44 +104,40 @@ def create_stream(stream_path):
 def stream_video(drone_id):
     global VIDEO_STREAM
     global OFFSET_RESET_MODE
-    running = True
+    global DISPLAY_STREAM_NAME
+
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
-    consumer_group = str(time.time)
+    consumer_group = str(time.time())
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
-    consumer.subscribe([VIDEO_STREAM+":"+drone_id])
-    while running:
-        msg = consumer.poll() #timeout=1)
+    consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME])
+    while True:
+        print("polling")
+        msg = consumer.poll()
         if msg is None:
             print('  Message is None')
             continue
         if not msg.error():
-            # print(msg.value().decode('utf-8'))
             json_msg = json.loads(msg.value().decode('utf-8'))
-            frameId = json_msg['index']
-            # print('Message is valid, sending frame ' + str(frameId))
+            image = json_msg['image']
+            print("reading {}".format(image))
             try:
-              image_name = ROOT_PATH + "/" + drone_id + "/images/source/frame-{}.jpg".format(frameId)
-              with open(image_name, "rb") as imageFile:
+              with open(image, "rb") as imageFile:
                 f = imageFile.read()
                 b = bytearray(f)
-              # time.sleep(1/20)
+                print("sending {}".format(image))
               yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
             except Exception as ex:
-              print("can't open file {}".format(frameId))
+              print("can't open file {}".format(image))
               print(ex)
   
-            if video_sleep_time:
+            if VIDEO_SLEEP_TIME :
               print("wait")
-              time.sleep(video_sleep_time)
-            frameId += 1
+              time.sleep(VIDEO_SLEEP_TIME)
+
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             print('  Bad message')
             print(msg.error())
-            running = False
-        # if frameId > 100:
-        #     running = False
-
-
+            break
 
 
 
@@ -268,7 +264,7 @@ def get_speed():
 def get_count():
   drone_id = request.form["drone_id"]
   if drone_id == "drone_1":
-    # print(dronedata_table.find_by_id(drone_id))
+    print(dronedata_table.find_by_id(drone_id))
     try:
       count = dronedata_table.find_by_id(drone_id)["count"]
     except Exception as ex:
