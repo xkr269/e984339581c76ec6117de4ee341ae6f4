@@ -1,101 +1,134 @@
-body {
-    overflow:hidden;
-}
-
-#main_map {
-    color:black;
-    background-image:url(background);
-    background-repeat:no-repeat;
-    background-size:100% 100%;
-    height: 686px;
-    width: 894px;
-}
-
 .border-visible {
   border-color: black;
   border-width: 1px;
   border-style: solid;
 }
 
-#arcdetriomphe {
-  position: fixed;
-  top: 150px;
-  left: 200px;
-  width: 150px;
-  height: 90px;
+body {
+    overflow:hidden;
 }
 
+#main {
+  height: 100vh;
+/*  position: absolute;
+*/}
 
-#toureiffel {
-  position: fixed;
-  top: 250px;
-  left: 200px;
-  width: 150px;
-  height: 130px;
+#main_map {
+    color:black;
+    background-image:url(background);
+    background-repeat:no-repeat;
+    background-size:100% 100%;
+    height: 100%;
+    width: 100%;
 }
 
-
-#montparnasse {
-  position: fixed;
-  top: 390px;
-  left: 275px;
-  width: 150px;
-  height: 130px;
-}
-
-#notredame {
-  position: fixed;
-  top: 250px;
-  left: 430px;
-  width: 140px;
-  height: 130px;
-}
-
-#sacrecoeur {
-  position: fixed;
-  top: 0px;
-  left: 430px;
-  width: 170px;
-  height: 150px;
-}
-
-
-#geode {
-  position: fixed;
-  top: 35px;
-  left: 620px;
-  width: 130px;
-  height: 100px;
-}
-
-#republique {
-  position: fixed;
-  top: 270px;
-  left: 600px;
-  width: 120px;
-  height: 130px;
-}
-
-
-#drone_1  {
+.drone {
   position: absolute;
-  top: 70px;
-  left: 930px;
-  width: 88px;
-  height: 70px;
+  width: 10%;
+  height: 10%;
   background-image: url(drone.png);
-  background-size: cover;
+  background-size: auto;
   z-index: 100;
+  display: none;
 }
 
 
-#drone_1_HUD  {
-  height: 300px;
-  align-items: center;
+#control_panel {
+
 }
 
-#drone_1_video  {
-  height: 200px;
-  width: 300px;
+#command_buttons div {
+  text-align: center;
+  line-height:60px;
 }
 
+#command_buttons button {
+  vertical-align: middle;
+  line-height: 20px;
+}
+
+
+.drone_ui  {
+  position: relative;
+  height: 30%;
+  /*display: none;*/
+}
+
+.drone_info {
+  background-image: url(coyote_empty.png);
+  background-size: contain;
+  background-repeat:no-repeat;
+  background-position: center; 
+  text-align: center;
+}
+
+.count {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 8vh;
+  font-weight: bold;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.battery {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 3vh;
+  top: 75%;
+  left: 30%;
+  transform: translate(-50%,0);
+}
+
+.battery_gauge {
+  background-size: contain;
+  background-repeat:no-repeat;
+  background-position: center;
+  height: 100%;
+}
+
+.battery_100{
+    background-image: url(battery_100.png);
+}
+.battery_75{
+    background-image: url(battery_75.png);
+}
+.battery_50{
+    background-image: url(battery_50.png);
+}
+.battery_25{
+    background-image: url(battery_25.png);
+}
+
+.battery_15{
+    background-image: url(battery_15.png);
+}
+
+
+
+.speed {
+  position: absolute;
+  color: #6CFC5F;
+  font-size: 3vh;
+  top: 75%;
+  left: 70%;
+  transform: translate(-50%,0);
+}
+
+
+
+
+.drone_video  {
+  height: 100%;
+}
+
+
+
+.zone_settings input {
+  width: 80%;
+}
+
+.edit_instructions {
+  font-size: 10px;
+}

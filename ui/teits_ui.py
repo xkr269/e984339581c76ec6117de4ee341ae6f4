@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import logging
+import io
 import os
 import json
 import time
@@ -23,40 +24,51 @@ parser.add_argument('-d', '--reset', dest='reset', default=False, help='Reset st
 args = parser.parse_args()
 
 
-
-# Retrieves current cluster name
-with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+def get_cluster_name():
+  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
-    cluster_name = first_line.split(' ')[0]
-    logging.debug('Cluster name : {}'.format(cluster_name))
+    return first_line.split(' ')[0]
 
-POSITIONS_STREAM = '/mapr/' + cluster_name + '/positions_stream'   # Positions stream path
-POSITIONS_TABLE = '/mapr/' + cluster_name + '/positions_table'  # Path for the table that stores positions information
-ZONES_TABLE = '/mapr/' + cluster_name + '/zones_table'   # Zones table path
-SCENE_TABLE = '/mapr/' + cluster_name + '/scene_table'   # Scene table path
-VIDEO_STREAM = '/mapr/' + cluster_name + '/video_stream'   # Video stream path
+cluster_name = get_cluster_name()
+
+PROJECT_FOLDER = "/teits"
+ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
+
+ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
+
+POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
+
+VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
+POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
+OFFSET_RESET_MODE = 'latest'
 
 
-UPLOAD_FOLDER = 'static'
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
-
-sleep_time = 0
-  
 # Create database connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
-scene_table = connection.get_or_create_store(SCENE_TABLE)
 
+
+UPLOAD_FOLDER = 'static'
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+video_sleep_time = 0
+  
 if args.reset:
   # Reset positions stream
   os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
   print("positions stream deleted")
 
+  # Reset video stream
+  os.system('maprcli stream delete -path ' + VIDEO_STREAM)
+  print("video stream deleted")
+
   # Init drone position
-  print("drone position reset")
-  positions_table.insert_or_replace(doc={'_id': 'drone_1', "zone":"home_base"})
+  print("Positions table deleted")
+  os.system('maprcli table delete -path ' + POSITIONS_TABLE)
+  
+
 
 
 # Configure positions stream
@@ -66,25 +78,55 @@ if not os.path.islink(POSITIONS_STREAM):
     logging.debug("stream created")
 
 
+# Positions stream. Each drone has its own topic
 logging.debug("creating producer for {}".format(POSITIONS_STREAM))
-p = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
+positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
 
 
-def stream_video(consumer):
+# Configure video stream
+if not os.path.islink(VIDEO_STREAM):
+    logging.debug("creating stream {}".format(VIDEO_STREAM))
+    os.system('maprcli stream create -path ' + VIDEO_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+    logging.debug("stream created")
+
+
+def create_stream(stream_path):
+  if not os.path.islink(stream_path):
+    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+
+
+def stream_video(drone_id):
+    global VIDEO_STREAM
+    global OFFSET_RESET_MODE
     running = True
-    frameId = 0
-    print('Start of loop')
+    print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
+    consumer_group = randint(3000, 3999)
+    consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
+    consumer.subscribe([VIDEO_STREAM+":"+drone_id])
     while running:
-        print('  Polling message')
         msg = consumer.poll() #timeout=1)
-        print('  Message obtained')
         if msg is None:
             print('  Message is None')
             continue
         if not msg.error():
-            print('  Message is valid, receiving frame ' + str(frameId))
-            yield (b'--frame\r\n' + b'Content-Type: image/png\r\n\r\n' + msg.value() + b'\r\n\r\n')
-            time.sleep(sleep_time)
+            print(msg.value().decode('utf-8'))
+            json_msg = json.loads(msg.value().decode('utf-8'))
+            frameId = json_msg['index']
+            print('Message is valid, sending frame ' + str(frameId))
+            try:
+              image_name = ROOT_PATH + "/" + drone_id + "/images/source/frame-{}.jpg".format(frameId)
+              with open(image_name, "rb") as imageFile:
+                f = imageFile.read()
+                b = bytearray(f)
+              # time.sleep(1/20)
+              yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
+            except Exception as ex:
+              print("can't open file {}".format(frameId))
+              print(ex)
+  
+            if video_sleep_time:
+              print("wait")
+              time.sleep(video_sleep_time)
             frameId += 1
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             print('  Bad message')
@@ -94,12 +136,7 @@ def stream_video(consumer):
         #     running = False
 
 
-def create_stream(drone_id):
-  stream_path = '/mapr/' + cluster_name + "/" + drone_id
-  if not os.path.islink(stream_path):
-    logging.debug("creating stream {}".format(stream_path))
-    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-    logging.debug("stream created")
+
 
 
 app = Flask(__name__)
@@ -116,35 +153,72 @@ def home():
 
 
 
-@app.route('/update_drone_position',methods=["POST"])
-def update_drone_position():
+@app.route('/set_drone_position',methods=["POST"])
+def set_drone_position():
   drone_id = request.form["drone_id"]
   drop_zone = request.form["drop_zone"]
   try:
-    from_zone = positions_table.find_by_id(drone_id)["zone"]
+    action = request.form["action"]
   except:
-    from_zone = "unpositionned"
-  positions_table.insert_or_replace(doc={'_id': drone_id, "zone":drop_zone})
-  message = {"drone_id":drone_id,"from_zone":from_zone,"drop_zone":drop_zone}
-  p.produce("positions", json.dumps(message))
-  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
+    action = "wait"
+
+  try:
+    current_position = positions_table.find_by_id(drone_id)
+    print(current_position)
+    from_zone = current_position["zone"]
+    current_status = current_position["status"]
+  except:
+    from_zone = "home_base"
+    current_status = "landed"
+
+  if from_zone != drop_zone and current_status == "landed":
+    action = "takeoff"
+  message = {"drone_id":drone_id,"drop_zone":drop_zone,"action":action}
+  print(message)
+  positions_producer.produce(drone_id, json.dumps(message))
+  return "{} moved from zone {} to zone {} then {}".format(drone_id,from_zone,drop_zone,action)
 
 
 
-@app.route('/video_stream/<drone_id>/<topic>')
-def video_stream(drone_id,topic):
-  create_stream(drone_id)
-  stream = "/" + drone_id + ":" + topic
-  consumer_group = randint(3000, 3999)
-  consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': 'latest'}})
-  consumer.subscribe([stream])
-  return Response(stream_video(consumer), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/get_position',methods=["POST"])
+def get_position():
+  drone_id = request.form["drone_id"]
+  try:
+    position = positions_table.find_by_id(drone_id)["zone"]
+  except:
+    position = "unpositionned"
+  return position
+
+
+@app.route('/get_next_waypoint',methods=["POST"])
+def get_next_waypoint():
+  waypoints = []
+  for zone in zones_table.find():
+    if zone["_id"] != "home_base":
+      waypoints.append(zone["_id"])
+
+  drone_id = request.form["drone_id"]
+  current_position = positions_table.find_by_id(drone_id)["zone"]
+  
+  if current_position == "home_base":
+    drone_number = int(drone_id.split("_")[1])
+    return waypoints[(drone_number + 1) % len(waypoints)]
+  current_index = waypoints.index(current_position)
+  if current_index == len(waypoints)-1:
+    new_index = 0
+  else :
+    new_index = current_index + 1
+  return waypoints[new_index]
+
+@app.route('/video_stream/<drone_id>')
+def video_stream(drone_id):
+  return Response(stream_video(drone_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 
 
 ###################################
-#####       SCENE EDITOR      #####
+#####          EDITOR         #####
 ###################################
 
 
@@ -165,22 +239,29 @@ def edit():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
 
-  try:
-    scene_width = scene_table.find_by_id("scene")["width"]
-  except:
-    scene_width = 1
-  return render_template("edit_ui.html",zones=zones_table.find(),scene_width=scene_width)
+  return render_template("edit_ui.html",zones=zones_table.find())
 
 @app.route('/save_zone',methods=['POST'])
 def save_zone():
   name = request.form['zone_name']
-  width = request.form['zone_width']
   height = request.form['zone_height']
+  width = request.form['zone_width']
   top = request.form['zone_top']
   left = request.form['zone_left']
-  zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left}
+  x = request.form['zone_x']
+  y = request.form['zone_y']
+  zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
+  print(zone_doc)
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
+
+@app.route('/get_zone_coordinates',methods=['POST'])
+def get_zone_coordinates():
+  zone_id = request.form['zone_id']
+  zone_doc = zones_table.find_by_id(_id=zone_id)
+
+  return json.dumps({"x":zone_doc["x"],"y":zone_doc["y"]})
+
 
 @app.route('/delete_zone',methods=['POST'])
 def delete_zone():
@@ -188,19 +269,12 @@ def delete_zone():
   zones_table.delete(_id=name)
   return "{} Deleted".format(name)
 
-@app.route('/set_scene_width',methods=['POST'])
-def set_scene_width():
-  width = request.form['scene_width']
-  scene_doc = {"_id":"scene","width":width}
-  scene_table.insert_or_replace(doc=scene_doc)
-  return "Width set"
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/update_zone_position',methods=["POST"])
-def update_zone_position():
+@app.route('/set_zone_position',methods=["POST"])
+def set_zone_position():
   zone_id = request.form["zone_id"]
   top = request.form["top"]
   left = request.form["left"]

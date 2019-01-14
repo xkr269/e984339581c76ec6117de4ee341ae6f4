@@ -4,7 +4,7 @@
 # must be altered to match your docker container deployment needs
 
 MAPR_CLUSTER=demo.mapr.com
-MAPR_CLDB_HOSTS=192.168.56.102:7222
+MAPR_CLDB_HOSTS=10.0.0.11:7222
 
 # MapR POSIX client mount path to enable direct MapR-FS access
 MAPR_MOUNT_PATH=/mapr
