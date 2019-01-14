@@ -21,6 +21,7 @@ RUN sudo apt-get install -y libgtk2.0-dev
 RUN sudo apt-get install -y libsm6 libxext6
 RUN sudo pip3 install numpy
 RUN sudo pip install maprdb-python-client
+RUN sudo pip install Flask
 
 # MapR-ES setup
 RUN export LD_LIBRARY_PATH=/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
@@ -30,12 +31,6 @@ RUN sudo pip install --global-option=build_ext --global-option="--library-dirs=/
 RUN sudo mkdir -p /home/mapr
 RUN sudo chmod -Rf 777 /home/mapr
 RUN sudo chown -Rf 2000:2000 /home/mapr
-COPY face_detect_cv3.py /home/mapr/
-COPY facedetect-img.py /home/mapr/
-COPY haarcascade_frontalface_default.xml /home/mapr/
-COPY startup.sh /home/mapr/
-COPY people_1.jpg /home/mapr/
-COPY people_2.jpg /home/mapr/
-COPY people_3.jpg /home/mapr/
-RUN sudo chmod +x /home/mapr/startup.sh
-CMD /home/mapr/startup.sh
+# COPY startup.sh /home/mapr/
+# RUN sudo chmod +x /home/mapr/startup.sh
+# CMD /home/mapr/startup.sh
