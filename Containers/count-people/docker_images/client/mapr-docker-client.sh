@@ -4,10 +4,10 @@
 # must be altered to match your docker container deployment needs
 
 MAPR_CLUSTER=demo.mapr.com
-MAPR_CLDB_HOSTS=10.0.0.11:7222
+MAPR_CLDB_HOSTS=10.0.0.11
 
 # MapR POSIX client mount path to enable direct MapR-FS access
-MAPR_MOUNT_PATH=/mapr
+# MAPR_MOUNT_PATH=/mapr
 
 # MapR secure cluster ticket file path on host
 MAPR_TICKET_FILE=/tmp/mapr_ticket
@@ -15,25 +15,24 @@ MAPR_TICKET_FILE=/tmp/mapr_ticket
 MAPR_TICKETFILE_LOCATION="/tmp/$(basename $MAPR_TICKET_FILE)"
 
 # MapR client user / group
-MAPR_CONTAINER_USER=mapr
-MAPR_CONTAINER_UID=5000
-MAPR_CONTAINER_GROUP=mapr
-MAPR_CONTAINER_GID=5000
-MAPR_CONTAINER_PASSWORD=mapr
-MAPR_DRONE_ID=drone_1
+MAPR_CONTAINER_USER=$(id -u -n)
+MAPR_CONTAINER_UID=$(id -u)
+MAPR_CONTAINER_GROUP=$(id -g -n)
+MAPR_CONTAINER_GID=$(id -g)
+MAPR_CONTAINER_PASSWORD=
 
 # Container memory: specify host XX[kmg] or 0 for no limit. Ex: 8192m, 12g
 MAPR_MEMORY=0
 
 # Container timezone: filename from /usr/share/zoneinfo
-MAPR_TZ=${TZ:-"Europe/Paris"}
+MAPR_TZ=${TZ:-""}
 
 # Container network mode: "host" causes the container's sshd service to conflict
 # with the host's sshd port (22) and so it will not be enabled in that case
 MAPR_DOCKER_NETWORK=bridge
 
 # Container security: --privileged or --cap-add SYS_ADMIN /dev/<device>
-MAPR_DOCKER_SECURITY="$([ -n $"MAPR_MOUNT_PATH" ] && echo "--privileged --cap-add SYS_ADMIN  --cap-add SYS_RESOURCE --device /dev/fuse")"
+MAPR_DOCKER_SECURITY="$([ -n $"MAPR_MOUNT_PATH" ] && echo "--cap-add SYS_ADMIN --cap-add SYS_RESOURCE --device /dev/fuse")"
 
 # Other Docker run args:
 MAPR_DOCKER_ARGS=""
@@ -62,7 +61,6 @@ MAPR_DOCKER_ARGS="$MAPR_DOCKER_SECURITY \
   -e MAPR_HS_HOST=$MAPR_HS_HOST \
   -e MAPR_OT_HOSTS=$MAPR_OT_HOSTS \
   -e MAPR_ZK_HOSTS=$MAPR_ZK_HOSTS \
-  -e MAPR_DRONE_ID=$MAPR_DRONE_ID \
   $MAPR_DOCKER_ARGS"
 
 [ -f "$MAPR_TICKET_FILE" ] && MAPR_DOCKER_ARGS="$MAPR_DOCKER_ARGS \
@@ -70,4 +68,4 @@ MAPR_DOCKER_ARGS="$MAPR_DOCKER_SECURITY \
   -v $MAPR_TICKET_FILE:$MAPR_TICKETFILE_LOCATION:ro"
 [ -d /sys/fs/cgroup ] && MAPR_DOCKER_ARGS="$MAPR_DOCKER_ARGS -v /sys/fs/cgroup:/sys/fs/cgroup:ro"
 
-docker run --rm -it $MAPR_DOCKER_ARGS count-people:latest "$@"
+docker run --rm -it $MAPR_DOCKER_ARGS maprtech/pacc:6.1.0_6.0.0_ubuntu16_yarn_fuse_streams "$@"

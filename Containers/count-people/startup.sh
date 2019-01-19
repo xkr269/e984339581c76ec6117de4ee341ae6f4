@@ -1,5 +1,4 @@
 #!/bin/bash
-#docker run --rm -it -p 5001:5001/tcp $MAPR_DOCKER_ARGS step1-resize-img:latest "$@"
-cd /home/mapr
+cd /mapr/demo.mapr.com/teits/e984339581c76ec6117de4ee341ae6f4/Containers/count-people
 export LD_LIBRARY_PATH=/opt/mapr/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-python3 /home/mapr/facedetect-img.py /frenchpatrol/pilote:images /frenchpatrol/detection:images
+python3 /mapr/demo.mapr.com/teits/e984339581c76ec6117de4ee341ae6f4/Containers/count-people/facedetect-img.py

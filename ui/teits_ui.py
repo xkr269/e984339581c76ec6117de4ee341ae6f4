@@ -37,17 +37,16 @@ PROJECT_FOLDER = "/teits"
 ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
 
 ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
-
 POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
-
 DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores drone data
-
+SETTINGS_TABLE = ROOT_PATH + '/settings_table' # Path for the application settings
 
 VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
 OFFSET_RESET_MODE = 'latest' # earliest or latest
 VIDEO_SLEEP_TIME = 0.1 # in second, used as speed control for re playing existing video
-DISPLAY_STREAM_NAME = "faces" # "raw" for original images, "faces" for face detection 
+DISPLAY_STREAM_NAME = "faces" # "raw" for original images, "faces" for face detection
+
 
 # Create database connection
 connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -109,7 +108,7 @@ def stream_video(drone_id):
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
-    consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME])
+    consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME + "*"])
     while True:
         print("polling")
         msg = consumer.poll()
