@@ -45,7 +45,6 @@ body {
 
 
 #control_panel {
-
 }
 
 #command_buttons div {
@@ -53,7 +52,8 @@ body {
   line-height:60px;
 }
 
-#command_buttons button {
+#command_buttons button, #command_buttons select{
+  display: inline-block;
   vertical-align: middle;
   line-height: 20px;
 }
@@ -61,83 +61,99 @@ body {
 
 .drone_ui  {
   position: relative;
-  height: 50%;
+  width: 550px;
+  height: 300px;
 }
 
 .drone_info {
-  position: relative;
+  position: absolute;
   background-image: url(coyote_empty.png);
   background-size: contain;
   background-repeat:no-repeat;
   background-position: center;
   background-color:   black;
   text-align: center;
-  height: 100%;
-  width: auto; 
+  height: 150px;
+  width: 150px; 
+}
+
+.count_graph {
+  position: absolute;
+  top: 150px;
+  background-color: grey; 
+  height: 150px;
+  width: 150px; 
 }
 
 .battery_gauge {
-  position: relative;
+  position: absolute;
   background-size: contain;
   background-repeat:no-repeat;
   background-position: center;
-  height: 100%;
-  width: auto;
-}
-
-.battery_100{
-    background-image: url(battery_100.png);
-}
-.battery_75{
-    background-image: url(battery_75.png);
-}
-.battery_50{
-    background-image: url(battery_50.png);
-}
-.battery_25{
-    background-image: url(battery_25.png);
-}
-
-.battery_15{
-    background-image: url(battery_15.png);
+  height: 150px;
+  width: 150px;
 }
 
 
 .count {
   position: absolute;
   color: #6CFC5F;
-  font-size: 10vh;
+  font-size: 30px;
   font-weight: bold;
   font-family:  nidus;
-  top: 50%;
-  left: 50%;
+  top: 75px;
+  left: 75px;
   transform: translate(-50%, -75%);
 }
 
 .battery_pct {
   position: absolute;
   color: #6CFC5F;
-  font-size: 5vh;
+  font-size: 15px;
   font-family:  nidus;
-  top: 50%;
-  left: 50%;
-  transform: translate(-200%,200%); /* left, top , in % of current div */
-}
+  top: 120px;
+  left: 30px;
+  transform: translate(-50%,0%); /* left , top */
+  }
 
 .speed {
   position: absolute;
   color: #6CFC5F;
-  font-size: 5vh;
+  font-size: 15px;
   font-family:  nidus;
-  top: 50%;
-  left: 50%;
-  transform: translate(150%,200%); /* left, top , in % of current div */
+  top: 120px;
+  left: 110px;
+/*  transform: translate(150%,200%);  left, top , in % of current div 
+*/}
+
+.connection_status {
+  position: absolute;
+  font-size: 7px;
+  font-family:  nidus;
+  top: 135px;
+  left: 75px;
+  transform: translate(-50%,0%);
 }
 
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+.connected {
+  color: #6CFC5F;
+}
+
+.disconnected {
+  color: #FF0000;
+  animation: blinker 2s linear infinite;
+}
 
 .drone_video  {
-  height: 100%;
-  max-width:  90%;
+  position: absolute;
+  left: 150px;
+  height: 300px;
+  width: 400px;
   background-color:   black;
 }
 

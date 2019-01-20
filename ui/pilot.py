@@ -72,7 +72,7 @@ connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
-dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":"unset","log_data":"unset","count":0})
+dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":"unset","log_data":"unset","count":0,"connection_status":"disconnected"})
 
 # test if folders exist and create them if needed
 if not os.path.exists(IMAGE_FOLDER):
@@ -276,11 +276,13 @@ def main():
     set_homebase() # reset drone position in the positions table
 
     # subscribe to flight data
-    # drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+    drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
     # drone.subscribe(drone.EVENT_LOG_DATA, handler)
 
     drone.connect()
-    drone.wait_for_connection(60)
+    drone.wait_for_connection(600)
+    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
+
     # drone.set_loglevel("LOG_DEBUG")
 
 
@@ -301,15 +303,19 @@ def main():
             if msg is None:
                 # Check that Drone is still connected
                 # if not, restarts.
+                if drone.state != drone.STATE_CONNECTED:
+                    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "disconnected"}})
+
                 if drone.state == drone.STATE_QUIT:
                     drone.sock.close()
-                    while videoThread.isAlive():
-                        print("wait for videothread to stop")
+                    while videoThread.isAlive() or drone.video_thread_running:
+                        print("wait for threads to stop")
                         time.sleep(1)
                     print("reconnecting #######################")
                     drone = tellopy.Tello()
                     drone.connect()
-                    drone.wait_for_connection(60)
+                    drone.wait_for_connection(600)
+                    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
                     print("connected - starting video thread")
                     # recreate video thread
                     videoThread = threading.Thread(target=get_drone_video,args=[drone])

@@ -10,6 +10,7 @@ RUN sudo apt-get install -y locate
 RUN sudo apt-get install -y python2.7 python-pip
 RUN sudo pip install --upgrade pip
 RUN sudo apt-get install -y python-dev pkg-config
+RUN sudo pip install requests
 RUN sudo apt-get install -y libavformat-dev
 RUN sudo apt-get install -y libavcodec-dev
 RUN sudo apt-get install -y libavdevice-dev
@@ -19,18 +20,9 @@ RUN sudo apt-get install -y libavresample-dev
 RUN sudo apt-get install -y libavfilter-dev
 RUN sudo apt-get install -y libgtk2.0-dev
 RUN sudo apt-get install -y libsm6 libxext6
-RUN sudo pip install requests
-RUN sudo apt-get install -y python-opencv
+#RUN sudo apt-get install -y python-opencv
 RUN sudo pip install image
-RUN sudo apt-get install -y python-numpy
-WORKDIR /tmp
-RUN wget http://ffmpeg.org/releases/ffmpeg-3.2.tar.bz2
-RUN tar -xjf ffmpeg-3.2.tar.bz2
-WORKDIR ffmpeg-3.2
-RUN ./configure --disable-static --enable-shared --disable-doc --disable-yasm
-RUN make
-RUN sudo make install
-RUN sudo pip install av
+#RUN sudo apt-get install -y python-numpy
 
 # Python lib for Ryze (DJI) Tello drone
 RUN sudo pip install tellopy
@@ -50,4 +42,4 @@ COPY video.mp4 /home/mapr/
 COPY video-producer.py /home/mapr/
 COPY startup.sh /home/mapr/
 RUN sudo chmod +x /home/mapr/startup.sh
-CMD /home/mapr/startup.sh
+#CMD /home/mapr/startup.sh

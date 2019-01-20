@@ -44,7 +44,7 @@ SETTINGS_TABLE = ROOT_PATH + '/settings_table' # Path for the application settin
 VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
 OFFSET_RESET_MODE = 'latest' # earliest or latest
-VIDEO_SLEEP_TIME = 0.1 # in second, used as speed control for re playing existing video
+VIDEO_SLEEP_TIME = 0.0 # in second, used as speed control for re playing existing video
 DISPLAY_STREAM_NAME = "faces" # "raw" for original images, "faces" for face detection
 
 
@@ -109,8 +109,13 @@ def stream_video(drone_id):
     consumer_group = str(time.time())
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
     consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
+    current_stream = DISPLAY_STREAM_NAME
     while True:
-        print("polling")
+        # print(DISPLAY_STREAM_NAME)
+        if DISPLAY_STREAM_NAME != current_stream:
+          consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
+          current_stream = DISPLAY_STREAM_NAME
+          print("stream changed")
         msg = consumer.poll()
         if msg is None:
             print('  Message is None')
@@ -122,14 +127,12 @@ def stream_video(drone_id):
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
                 b = bytearray(f)
-                print("sending {}".format(image))
               yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
             except Exception as ex:
               print("can't open file {}".format(image))
               print(ex)
   
             if VIDEO_SLEEP_TIME :
-              print("wait")
               time.sleep(VIDEO_SLEEP_TIME)
 
         elif msg.error().code() != KafkaError._PARTITION_EOF:
@@ -250,7 +253,6 @@ def get_speed():
       # speed = math.sqrt(vel_x * vel_x + vel_y*vel_y)
       speed = float(dronedata_table.find_by_id(drone_id)["flight_data"]["fly_speed"])
     except Exception as ex:
-      print(ex)
       traceback.print_exc()
       speed = 0.0
     # print(speed)
@@ -271,6 +273,21 @@ def get_count():
       count = 0
     return str(count)
   return "0"
+
+@app.route('/set_video_stream',methods=["POST"])
+def set_video_stream():
+  global DISPLAY_STREAM_NAME
+  DISPLAY_STREAM_NAME = request.form["stream"]
+  return "Ok"
+
+
+@app.route('/get_connection_status',methods=["POST"])
+def get_connection_status():
+  drone_id = request.form["drone_id"]
+  return dronedata_table.find_by_id(drone_id)["connection_status"]
+
+
+
 
 
 ###################################
