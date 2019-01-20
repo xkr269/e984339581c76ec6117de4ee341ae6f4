@@ -33,12 +33,12 @@ from math import atan2, sqrt, pi, floor
 
 
 DRONE_ID = sys.argv[1]
-FPS =30.0
+FPS =10.0
 PROJECT_FOLDER = "/teits"
 DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
 FORWARD_COEF = 3 # Time taken to move 1m
 ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
-MAX_FLIGHT_TIME = 300 # seconds
+SIMUL_MODE = True
 
 
 def get_cluster_name():
@@ -102,13 +102,16 @@ def get_drone_video(drone):
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        while True:
-            print("video loop")
+        while drone.state != drone.STATE_QUIT:
+            print("Drone is connected - decoding container")
             for frame in container.decode(video=0):
+                if drone.state != drone.STATE_CONNECTED:
+                    print("Drone disconnected - QUITTING VIDEO THREAD ##############")
+                    break
                 received_frames += 1
                 current_time = time.time()
                 if current_time > (last_frame_time + float(1/FPS)):
-                    print(frame)
+                    # print(frame)
                     frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
                     video_producer.produce(DRONE_ID+"_raw", json.dumps({"drone_id":DRONE_ID,
                                                                         "index":frame.index,
@@ -119,7 +122,7 @@ def get_drone_video(drone):
                 # Print stats every second
                 elapsed_time = time.time() - start_time
                 if int(elapsed_time) != current_sec:
-                    print("Elapsed : {} s, received {} fps , sent {} fps".format(elapsed_time,received_frames,sent_frames))
+                    print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
                     received_frames = 0
                     sent_frames = 0
                     current_sec = int(elapsed_time)
@@ -205,13 +208,15 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         if abs(offset) > 0:
             print("###############      turning {} degrees".format(angle))
-            drone.turn(offset)
+            if not SIMUL_MODE:
+                drone.turn(offset)
             print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
             time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
 
         # deplacement        
         if distance > 0 :
-            move(distance)
+            if not SIMUL_MODE:
+                move(distance)
             print("sleep {}".format(max(1,distance * FORWARD_COEF)))
             time.sleep(max(1,distance * FORWARD_COEF))
 
@@ -230,22 +235,22 @@ def set_homebase():
 
 def handler(event, sender, data, **args):
     drone = sender
-    # if event is drone.EVENT_LOG_DATA:
-    #     log_data_doc = {"mvo":{"vel_x":data.mvo.vel_x,
-    #                            "vel_y":data.mvo.vel_y,
-    #                            "vel_z":data.mvo.vel_z,
-    #                            "pos_x":data.mvo.pos_x,
-    #                            "pos_y":data.mvo.pos_y,
-    #                            "pos_z":data.mvo.pos_z},
-    #                     "imu":{"acc_x":data.imu.acc_x,
-    #                            "acc_y":data.imu.acc_y,
-    #                            "acc_z":data.imu.acc_z,
-    #                            "gyro_x":data.imu.gyro_x,
-    #                            "gyro_y":data.imu.gyro_y,
-    #                            "gyro_z":data.imu.gyro_z}}
-    #     mutation = {'$put': {'log_data': log_data_doc}}
-    #     dronedata_table.update(_id=DRONE_ID,mutation=mutation)
-    #     # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
+    if event is drone.EVENT_LOG_DATA:
+        log_data_doc = {"mvo":{"vel_x":data.mvo.vel_x,
+                               "vel_y":data.mvo.vel_y,
+                               "vel_z":data.mvo.vel_z,
+                               "pos_x":data.mvo.pos_x,
+                               "pos_y":data.mvo.pos_y,
+                               "pos_z":data.mvo.pos_z},
+                        "imu":{"acc_x":data.imu.acc_x,
+                               "acc_y":data.imu.acc_y,
+                               "acc_z":data.imu.acc_z,
+                               "gyro_x":data.imu.gyro_x,
+                               "gyro_y":data.imu.gyro_y,
+                               "gyro_z":data.imu.gyro_z}}
+        mutation = {'$put': {'log_data': log_data_doc}}
+        # dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+        # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
 
 
     if event is drone.EVENT_FLIGHT_DATA:
@@ -254,7 +259,12 @@ def handler(event, sender, data, **args):
                            "fly_speed":str(data.fly_speed),
                            "wifi_strength":str(data.wifi_strength)}
         mutation = {'$put': {'flight_data': flight_data_doc}}
-        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+        try:
+            dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+        except Exception as ex:
+            print(str(ex))
+            if "EXPIRED" in str(ex):
+                print("EXPIRED")
 
 
 
@@ -262,11 +272,11 @@ def handler(event, sender, data, **args):
 
 def main():
 
-    drone = tellopy.Tello()
+    drone = tellopy.Tello() 
     set_homebase() # reset drone position in the positions table
 
     # subscribe to flight data
-    drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+    # drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
     # drone.subscribe(drone.EVENT_LOG_DATA, handler)
 
     drone.connect()
@@ -280,16 +290,30 @@ def main():
 
 
     start_time = time.time()
-    consumer_group = randint(1000, 100000)
+    consumer_group = DRONE_ID + str(time.time())
     positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
 
     while True:
         try:
-            print("waiting for instructions")
-            msg = positions_consumer.poll()
+            print("waiting for instructions - drone state = {}".format(drone.state))
+            msg = positions_consumer.poll(timeout=1)
             if msg is None:
-                print("none")
+                # Check that Drone is still connected
+                # if not, restarts.
+                if drone.state == drone.STATE_QUIT:
+                    drone.sock.close()
+                    while videoThread.isAlive():
+                        print("wait for videothread to stop")
+                        time.sleep(1)
+                    print("reconnecting #######################")
+                    drone = tellopy.Tello()
+                    drone.connect()
+                    drone.wait_for_connection(60)
+                    print("connected - starting video thread")
+                    # recreate video thread
+                    videoThread = threading.Thread(target=get_drone_video,args=[drone])
+                    videoThread.start()
                 continue
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
@@ -299,8 +323,9 @@ def main():
                 
                 if json_msg["action"] == "takeoff":
                     print("###############      Takeoff")
-                    drone.takeoff()
-                    time.sleep(5)
+                    if not SIMUL_MODE:
+                        drone.takeoff()
+                        time.sleep(5)
                     positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying"})
 
                 if drop_zone != from_zone:
@@ -316,16 +341,16 @@ def main():
             elif msg.error().code() != KafkaError._PARTITION_EOF:
                 print(msg.error())
 
-            if time.time() > start_time + MAX_FLIGHT_TIME:
-                print("Time expired - Landing")
-                drone.land()
-                time.sleep(5)
-                break
+        except KeyboardInterrupt:
+            print "test"
+            break   
+
         except Exception as ex:
-            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+            print("@@@@@@@@@@@@@@@       EXCEPTION      @@@@@@@@@@@@@@@")
             print(ex)
             traceback.print_exc()
 
+    print("QUITTING $$$$$$$$$$$$$")
 
     drone.quit()
 

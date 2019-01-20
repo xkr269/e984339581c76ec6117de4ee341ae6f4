@@ -108,7 +108,7 @@ def stream_video(drone_id):
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
-    consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME + "*"])
+    consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
     while True:
         print("polling")
         msg = consumer.poll()
@@ -118,7 +118,6 @@ def stream_video(drone_id):
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
-            print("reading {}".format(image))
             try:
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
@@ -263,7 +262,7 @@ def get_speed():
 def get_count():
   drone_id = request.form["drone_id"]
   if drone_id == "drone_1":
-    print(dronedata_table.find_by_id(drone_id))
+    # print(dronedata_table.find_by_id(drone_id))
     try:
       count = dronedata_table.find_by_id(drone_id)["count"]
     except Exception as ex:

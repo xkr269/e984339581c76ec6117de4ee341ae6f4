@@ -9,7 +9,7 @@ import traceback
 import json
 import os
 
-
+print(1)
 def get_cluster_name():
   with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
@@ -21,6 +21,7 @@ def get_cluster_ip():
     return first_line.split(' ')[2].split(':')[0]
 
 
+print(2)
 
 ############################       Settings        #########################
 
@@ -35,6 +36,7 @@ DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stor
 PROCESSORS_TABLE = ROOT_PATH + '/processors_table'  # Path for the table that stores processor info
 VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 
+print(3)
 # Face detection params
 cascPath = "haarcascade_frontalface_default.xml"
 faceCascade = cv2.CascadeClassifier(cascPath)
@@ -44,23 +46,30 @@ connection_str = cluster_ip + ":5678?auth=basic;user=mapr;password=mapr;ssl=fals
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 processors_table = connection.get_or_create_store(PROCESSORS_TABLE)
+print(4)
 
 # Configure consumer
 consumer_group = str(time.time())
 consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
 consumer.subscribe([VIDEO_STREAM + ":" + PROCESSOR_ID])
 
+print(5)
 # Configure producer
 producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
+
+print(6)
+
+current_offset = processors_table.find_by_id("offset")["offset"]
+
+print("Set {} as available".format(PROCESSOR_ID))
+processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
 
 while True:
     # Set processor as "available"
-    print("Set {} as available".format(PROCESSOR_ID))
-    processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
-    msg = consumer.poll(timeout=1)
-    print("polled at {}".format(time.time()))
+    msg = consumer.poll()
     if msg is None:
+        print("polled at {}".format(time.time()))
         continue
     if not msg.error():
         try:
@@ -69,7 +78,9 @@ while True:
             image_path = json_msg["image"]
             frame_index = json_msg["index"]
             drone_id = json_msg["drone_id"]
-
+            frame_offset = json_msg["offset"]
+            if frame_offset < current_offset:
+                continue
             image_array = numpy.array(Image.open(image_path))
             image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -79,7 +90,6 @@ while True:
                 minNeighbors=5,
                 minSize=(30, 30)
             )
-            print('Found {} faces!'.format(len(faces)))
 
             # Update drone document with faces count 
             dronedata_table.update(_id=json_msg["drone_id"],mutation={'$put': {'count': len(faces)}})
@@ -97,7 +107,21 @@ while True:
 
             # Write image to video stream
             write_topic = drone_id + "_faces"
+
+            check_time = time.time()
+            display_wait_previous_frame = True
+            current_offset = processors_table.find_by_id("offset")["offset"]
+            while current_offset != (frame_offset - 1) and time.time() < (check_time+1): # allow 1 second of lag
+                if display_wait_previous_frame :
+                    print('Waiting for previous frame to complete - Current frame : {}, Last committed frame = {}'.format(frame_offset,current_offset))
+                    display_wait_previous_frame = False
+                current_offset = processors_table.find_by_id("offset")["offset"]
+
+            print("frame {} for {} - offset {} processed".format(frame_index,drone_id,frame_offset))
             producer.produce(write_topic,json.dumps({"index":frame_index,"image":new_image_path}))
+            processors_table.insert_or_replace({"_id":"offset","offset":frame_offset})
+            print("Set {} as available".format(PROCESSOR_ID))
+            processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
 
         except Exception as ex:
