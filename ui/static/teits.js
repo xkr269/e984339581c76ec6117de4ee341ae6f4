@@ -305,10 +305,15 @@ function update_connection_status(){
                 div.children(".connection_status").text(data);
                 if(data == "connected"){
                     div.children(".connection_status").removeClass("disconnected");
+                    div.children(".connection_status_video").removeClass("disconnected");
                     div.children(".connection_status").addClass("connected");
+                    div.children(".connection_status_video").text("");
+
                 }else{
                     div.children(".connection_status").removeClass("connected");
                     div.children(".connection_status").addClass("disconnected");
+                    div.children(".connection_status_video").addClass("disconnected");
+                    div.children(".connection_status_video").text(data);
                 }
             }
         });

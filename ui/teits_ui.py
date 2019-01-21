@@ -31,10 +31,18 @@ def get_cluster_name():
     first_line = f.readline()
     return first_line.split(' ')[0]
 
-cluster_name = get_cluster_name()
+
+def get_cluster_ip():
+  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+    first_line = f.readline()
+    return first_line.split(' ')[2].split(':')[0]
+
+
+CLUSTER_NAME = get_cluster_name()
+CLUSTER_IP = get_cluster_ip()
 
 PROJECT_FOLDER = "/teits"
-ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
+ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
 
 ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
 POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
@@ -45,11 +53,11 @@ VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
 POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
 OFFSET_RESET_MODE = 'latest' # earliest or latest
 VIDEO_SLEEP_TIME = 0.0 # in second, used as speed control for re playing existing video
-DISPLAY_STREAM_NAME = "faces" # "raw" for original images, "faces" for face detection
+DISPLAY_STREAM_NAME = "raw" # "raw" for original images, "faces" for face detection
 
 
 # Create database connection
-connection_str = "localhost:5678?auth=basic;user=mapr;password=mapr;ssl=false"
+connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
@@ -116,9 +124,9 @@ def stream_video(drone_id):
           consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
           current_stream = DISPLAY_STREAM_NAME
           print("stream changed")
-        msg = consumer.poll()
+        msg = consumer.poll(timeout=1)
         if msg is None:
-            print('  Message is None')
+            print("no frame available")
             continue
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
@@ -139,7 +147,7 @@ def stream_video(drone_id):
             print('  Bad message')
             print(msg.error())
             break
-
+    print("Stopping video loop for {}".format(drone_id))
 
 
 app = Flask(__name__)

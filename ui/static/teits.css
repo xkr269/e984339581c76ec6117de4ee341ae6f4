@@ -135,6 +135,18 @@ body {
   transform: translate(-50%,0%);
 }
 
+
+.connection_status_video {
+  position: absolute;
+  font-size: 20px;
+  font-family:  nidus;
+  top: 140px;
+  left: 350px;
+  transform: translate(-50%,0%);
+  z-index: 100;
+}
+
+
 @keyframes blinker {
   50% {
     opacity: 0;
@@ -146,6 +158,9 @@ body {
 
 .disconnected {
   color: #FF0000;
+}
+
+.blink{
   animation: blinker 2s linear infinite;
 }
 
