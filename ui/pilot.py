@@ -46,14 +46,20 @@ def get_cluster_name():
     first_line = f.readline()
     return first_line.split(' ')[0]
 
+def get_cluster_ip():
+  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
+    first_line = f.readline()
+    return first_line.split(' ')[2].split(':')[0]
+
 def check_stream(stream_path):
   if not os.path.islink(stream_path):
     print("stream {} is missing. Exiting.".format(stream_path))
     sys.exit()
     
-cluster_name = get_cluster_name()
+CLUSTER_NAME = get_cluster_name()
+CLUSTER_IP = get_cluster_ip()
 
-ROOT_PATH = '/mapr/' + cluster_name + PROJECT_FOLDER
+ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
 
 IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
 VIDEO_STREAM = ROOT_PATH + "/video_stream"
@@ -67,7 +73,7 @@ SETTINGS_TABLE = ROOT_PATH + "/settings_table"
 current_angle = 0
 
 # Create database connection
-connection_str = "10.0.0.11:5678?auth=basic;user=mapr;password=mapr;ssl=false"
+connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 positions_table = connection.get_or_create_store(POSITIONS_TABLE)
