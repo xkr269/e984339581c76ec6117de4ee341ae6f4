@@ -70,7 +70,7 @@ ZONES_TABLE = ROOT_PATH + "/zones_table"
 POSITIONS_TABLE = ROOT_PATH + "/positions_table"
 SETTINGS_TABLE = ROOT_PATH + "/settings_table"
 
-current_angle = 0
+current_angle = 0.0
 
 # Create database connection
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -228,12 +228,12 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         current_angle += offset
 
-    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":drop_zone, "status":"flying", "offset":current_angle})
+    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":drop_zone, "status":"flying","offset":current_angle})
 
 
 def set_homebase():
     # current_zone = positions_table.find_by_id(DRONE_ID)["zone"]
-    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":"home_base", "status":"landed"})
+    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":"home_base", "status":"landed","offset":current_angle})
 
 
 
@@ -277,6 +277,8 @@ def handler(event, sender, data, **args):
 #######################       MAIN FUNCTION       ##################
 
 def main():
+
+    global current_angle
 
     drone = tellopy.Tello() 
     set_homebase() # reset drone position in the positions table
@@ -338,7 +340,7 @@ def main():
                     if not SIMUL_MODE:
                         drone.takeoff()
                         time.sleep(5)
-                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying"})
+                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying","offset":current_angle})
 
                 if drop_zone != from_zone:
                     move_to_zone(drone,from_zone,drop_zone)
@@ -347,7 +349,7 @@ def main():
                 if json_msg["action"] == "land":
                     print("###############      Land")
                     drone.land()
-                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed"})
+                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed","offset":current_angle})
                     time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:

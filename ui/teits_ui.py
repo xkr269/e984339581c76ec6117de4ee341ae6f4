@@ -126,7 +126,6 @@ def stream_video(drone_id):
           print("stream changed")
         msg = consumer.poll(timeout=1)
         if msg is None:
-            print("no frame available")
             continue
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
@@ -209,6 +208,7 @@ def get_next_waypoint():
 
   drone_id = request.form["drone_id"]
   current_position = positions_table.find_by_id(drone_id)["zone"]
+  print("current : {}".format(current_position))
   
   if current_position == "home_base":
     drone_number = int(drone_id.split("_")[1])
@@ -332,7 +332,8 @@ def save_zone():
   x = request.form['zone_x']
   y = request.form['zone_y']
   zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
-  # print(zone_doc)
+  print("Zone saved")
+  print(zone_doc)
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
 
