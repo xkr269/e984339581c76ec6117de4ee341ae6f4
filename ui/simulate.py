@@ -45,7 +45,7 @@ positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":{"battery":"75","fly_speed":"5"},"log_data":"unset","count":"0","connection_status":"connected"})
 
 
-MESSAGES_RATE = 3.0 # per second
+MESSAGES_RATE = 0.2 # per second
 
 producer = Producer({'streams.producer.default.stream': SOURCE_STREAM})
 
@@ -56,6 +56,9 @@ def video_generator():
     print("video generator started")
     
     global generate_video
+    global IMAGE_FOLDER
+
+
     produced_messages = 0
     current_sec = 0
     start_time = 0
@@ -64,12 +67,13 @@ def video_generator():
     # list and sort files in the directory
     files = filter(os.path.isfile, glob.glob(IMAGE_FOLDER + "*"))
     files.sort(key=lambda x: os.path.getmtime(x))
-    indexes = []
 
-    indexes.sort()
+    print("done")
 
     while generate_video:
+        print("aa")
         for filename in files:
+            print(filename)
             index = int(filename.split('/')[-1].split('.')[0].split('-')[1])
             producer.produce(DRONE_ID+"_raw", json.dumps({"drone_id":DRONE_ID,
                                                           "index":index,
@@ -102,11 +106,11 @@ def main():
     videoThread = threading.Thread(target=video_generator)
     videoThread.start()
 
+    print("waiting for instructions")
     while True:
         try:
-            print("waiting for instructions")
 
-            msg = positions_consumer.poll()
+            msg = positions_consumer.poll(timeout=1)
 
             if msg is None:
                 continue
@@ -136,7 +140,7 @@ def main():
             break   
 
     generate_video = False
-    teim.sleep(1)
+    time.sleep(1)
     dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":{"battery":"75","fly_speed":"0"},"log_data":"unset","count":"0","connection_status":"disconnected"})
 
 

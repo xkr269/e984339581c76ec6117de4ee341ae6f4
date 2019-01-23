@@ -271,16 +271,30 @@ def get_speed():
 @app.route('/get_count',methods=["POST"])
 def get_count():
   drone_id = request.form["drone_id"]
-  if drone_id == "drone_1":
-    # print(dronedata_table.find_by_id(drone_id))
+  if drone_id == "global":
     try:
-      count = dronedata_table.find_by_id(drone_id)["count"]
+        count = 0
+        for dronedata in dronedata_table.find():
+            print("did : {} - dronedata : {}".format(drone_id,dronedata))
+            count += int(dronedata["count"])
+        return str(count)
+    except Exception:
+      traceback.print_exc()
+      count = 0
+      return "-"
+  else:
+    try:
+      dronedata = dronedata_table.find_by_id(drone_id)
+      print("did : {} - dronedata : {}".format(drone_id,dronedata))
+      count = dronedata["count"]
     except Exception as ex:
       print(ex)
       traceback.print_exc()
       count = 0
     return str(count)
-  return "0"
+  return "-"
+
+
 
 @app.route('/set_video_stream',methods=["POST"])
 def set_video_stream():
@@ -370,5 +384,3 @@ def set_zone_position():
 
 
 app.run(debug=True,host='0.0.0.0',port=80)
-
-

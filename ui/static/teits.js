@@ -3,7 +3,8 @@ var DISPLAY_SPEED_TIMER = 1000
 var DISPLAY_CONNECTION_STATUS_TIMER = 1000
 var DISPLAY_BATTERY_TIMER = 5000
 var PATROL_TIMER = 3000
-
+var GRAPH_TIMER = 2000 
+var graph_color = "#6CFC5F"
 
 
 
@@ -114,20 +115,23 @@ $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
             $("#drone_1").show()
             $("#drone_1_ui").show();
+            draw_chart("drone_1_count_graph","drone_1_count");
             set_drone_position("drone_1","home_base","takeoff");
 
         }
-/*        else if (!$("#drone_2_ui").is(":visible")){
+        else if (!$("#drone_2_ui").is(":visible")){
             $("#drone_2").show()
             $("#drone_2_ui").show();
+            draw_chart("drone_2_count_graph","drone_2_count");
             set_drone_position("drone_2","home_base","takeoff");
         }
         else {
             $("#drone_3").show()
             $("#drone_3_ui").show();
+            draw_chart("drone_3_count_graph","drone_3_count");
             set_drone_position("drone_3","home_base","takeoff");
 
-        }*/
+        }
 })
 
 
@@ -238,7 +242,8 @@ $( document ).ready(function() {
     update_battery();
     update_speed();
     update_count();
-    update_connection_status();
+    update_connection_status(); 
+    draw_chart("global_count_graph","global_count");
 });
 
 function update_battery(){
@@ -280,14 +285,14 @@ function update_speed(){
 
 
 function update_count(){
-    $(".drone_ui").each(function(){
+    $(".count").each(function(){
         var div = $(this);
         $.ajax({
             url: 'get_count',
             type: 'post',
-            data: {"drone_id":div.attr("drone_id")},
+            data: {"drone_id":div.parent().attr("drone_id")},
             success:function(data){
-                div.children(".count").text(data);
+                div.text(data);
             }
         });
     });
@@ -378,11 +383,9 @@ $("#video_stream_selector").change(function(){
     });
 })
 
-drone_1_chart();
-global_chart();
 
-function drone_1_chart(){
-    Highcharts.chart('drone_1_count_graph', {
+function draw_chart(display_div_id,data_div_id){
+    Highcharts.chart(display_div_id, {
         chart: {
             type: 'spline',
             backgroundColor: '#000000',
@@ -393,14 +396,14 @@ function drone_1_chart(){
             marginRight: 10,
             events: {
                 load: function () {
-
                     // set up the updating of the chart each second
                     var series = this.series[0];
                     setInterval(function () {
                         var x = (new Date()).getTime(), // current time
-                            y = Number($("#drone_1_count").text());
-                        series.addPoint([x, y], true, true);
-                    }, 1000);
+                            y = Number($("#"+data_div_id).text());
+                        var shift = (series.data.length >= 30);
+                        series.addPoint([x, y], true, shift);
+                    }, GRAPH_TIMER);
                 }
             }
         },
@@ -426,15 +429,6 @@ function drone_1_chart(){
             labels: {
                enabled: false
            },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        tooltip: {
-            headerFormat: '<b>{series.name}</b><br/>',
-            pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
         },
         legend: {
             enabled: false
@@ -442,260 +436,16 @@ function drone_1_chart(){
         exporting: {
             enabled: false
         },
+
+         plotOptions: {
+        series: {
+            color: graph_color
+        }
+    },
+
         series: [{
-            name: 'Random data',
-            data: (function () {
-                // generate an array of random data
-                var data = [],
-                    time = (new Date()).getTime(),
-                    i;
-
-                for (i = -19; i <= 0; i += 1) {
-                    data.push({
-                        x: time + i * 1000,
-                        y: Math.random()
-                    });
-                }
-                return data;
-            }())
-        }]
-    });
-}
-
-function drone_2_chart(){
-    Highcharts.chart('drone_2_count_graph', {
-        chart: {
-            type: 'spline',
-            backgroundColor: '#000000',
-            style:{
-                color:'#FFFFFF',
-            },
-            animation: Highcharts.svg, // don't animate in old IE
-            marginRight: 10,
-            events: {
-                load: function () {
-
-                    // set up the updating of the chart each second
-                    var series = this.series[0];
-                    setInterval(function () {
-                        var x = (new Date()).getTime(), // current time
-                            y = Number($("#drone_2_count").text());
-                        series.addPoint([x, y], true, true);
-                    }, 1000);
-                }
-            }
-        },
-
-        time: {
-            useUTC: false
-        },
-        title:{
-            text:''
-        },
-
-        xAxis: {
-            type: 'datetime',
-            tickPixelInterval: 150,
-            labels: {
-               enabled: false
-           },
-        },
-        yAxis: {
-            title: {
-                text: ''
-            },
-            labels: {
-               enabled: false
-           },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        tooltip: {
-            headerFormat: '<b>{series.name}</b><br/>',
-            pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
-        },
-        legend: {
-            enabled: false
-        },
-        exporting: {
-            enabled: false
-        },
-        series: [{
-            name: 'Random data',
-            data: (function () {
-                // generate an array of random data
-                var data = [],
-                    time = (new Date()).getTime(),
-                    i;
-
-                for (i = -19; i <= 0; i += 1) {
-                    data.push({
-                        x: time + i * 1000,
-                        y: Math.random()
-                    });
-                }
-                return data;
-            }())
-        }]
-    });
-}
-
-function drone_3_chart(){
-    Highcharts.chart('drone_3_count_graph', {
-        chart: {
-            type: 'spline',
-            backgroundColor: '#000000',
-            style:{
-                color:'#FFFFFF',
-            },
-            animation: Highcharts.svg, // don't animate in old IE
-            marginRight: 10,
-            events: {
-                load: function () {
-
-                    // set up the updating of the chart each second
-                    var series = this.series[0];
-                    setInterval(function () {
-                        var x = (new Date()).getTime(), // current time
-                            y = Number($("#drone_3_count").text());
-                        series.addPoint([x, y], true, true);
-                    }, 1000);
-                }
-            }
-        },
-
-        time: {
-            useUTC: false
-        },
-        title:{
-            text:''
-        },
-
-        xAxis: {
-            type: 'datetime',
-            tickPixelInterval: 150,
-            labels: {
-               enabled: false
-           },
-        },
-        yAxis: {
-            title: {
-                text: ''
-            },
-            labels: {
-               enabled: false
-           },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        tooltip: {
-            headerFormat: '<b>{series.name}</b><br/>',
-            pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
-        },
-        legend: {
-            enabled: false
-        },
-        exporting: {
-            enabled: false
-        },
-        series: [{
-            name: 'Random data',
-            data: (function () {
-                // generate an array of random data
-                var data = [],
-                    time = (new Date()).getTime(),
-                    i;
-
-                for (i = -19; i <= 0; i += 1) {
-                    data.push({
-                        x: time + i * 1000,
-                        y: Math.random()
-                    });
-                }
-                return data;
-            }())
-        }]
-    });
-}
-
-
-function global_chart(){
-    Highcharts.chart('global_count_graph', {
-        chart: {
-            type: 'spline',
-            backgroundColor: '#000000',
-            style:{
-                color:'#FFFFFF',
-            },
-            animation: Highcharts.svg, // don't animate in old IE
-            marginRight: 10,
-            events: {
-                load: function () {
-
-                    // set up the updating of the chart each second
-                    var series = this.series[0];
-                    setInterval(function () {
-                        var x = (new Date()).getTime(), // current time
-                            y = Number($("#global_count").text());
-                        series.addPoint([x, y], true, true);
-                    }, 1000);
-                }
-            }
-        },
-
-        time: {
-            useUTC: false
-        },
-        title:{
-            text:''
-        },
-
-        xAxis: {
-            type: 'datetime',
-            tickPixelInterval: 150
-        },
-        yAxis: {
-            title: {
-                text: ''
-            },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        tooltip: {
-            headerFormat: '<b>{series.name}</b><br/>',
-            pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
-        },
-        legend: {
-            enabled: false
-        },
-        exporting: {
-            enabled: false
-        },
-        series: [{
-            name: 'Random data',
-            data: (function () {
-                // generate an array of random data
-                var data = [],
-                    time = (new Date()).getTime(),
-                    i;
-
-                for (i = -19; i <= 0; i += 1) {
-                    data.push({
-                        x: time + i * 1000,
-                        y: Math.random()
-                    });
-                }
-                return data;
-            }())
+            name: 'Count',
+            data: []            
         }]
     });
 }

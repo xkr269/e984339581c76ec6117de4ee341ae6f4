@@ -85,11 +85,11 @@ body {
 .drone_ui  {
   position: relative;
   height: 33vh;
-/*  display: none;*/
+  display: none;
 }
 
 .drone_info {
-  position: relative;
+  position: absolute;
   background-image: url(coyote_empty.png);
   background-size: contain;
   background-repeat:no-repeat;
@@ -161,10 +161,10 @@ body {
 
 .connection_status_video {
   position: absolute;
-  font-size: 20px;
+  font-size: 4vh;
   font-family:  nidus;
-  top: 140px;
-  left: 350px;
+  top: 13vh;
+  left: 40vh;
   transform: translate(-50%,0%);
   z-index: 100;
 }
