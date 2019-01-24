@@ -9,8 +9,14 @@
 
 
 .border-visible {
-  border-color: white;
-  border-width: 0px;
+  border-color: #6CFC5F;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.edit-border-visible {
+  border-color: #6CFC5F;
+  border-width: 1px;
   border-style: solid;
 }
 
@@ -26,6 +32,7 @@ body {
 
 #main_map {
     color:black;
+    position: relative;
     background-image:url(background);
     background-repeat:no-repeat;
     background-position: center;
@@ -203,4 +210,40 @@ body {
 
 .edit_instructions {
   font-size: 10px;
+}
+
+
+
+
+button,select{
+    color: #444444;
+    background: #F3F3F3;
+    border: 1px #DADADA solid;
+    padding: 5px 10px;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: 9pt;
+    outline: none;
+}
+
+button:hover {
+    border: 1px #C6C6C6 solid;
+    box-shadow: 1px 1px 1px #EAEAEA;
+    color: #333333;
+    background: #F7F7F7;
+}
+
+button:active {
+    box-shadow: inset 1px 1px 1px #DFDFDF;   
+}
+
+
+
+.recording_video  {
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
+  height: 90vh;
+  width: 120vh;
+  background-color:   black;
 }

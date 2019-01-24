@@ -10,12 +10,15 @@ import argparse
 import traceback
 from random import randint
 from werkzeug.utils import secure_filename
+from shutil import copyfile
+from copy import deepcopy
+
 
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from confluent_kafka import Producer, Consumer, KafkaError
 
-
+import settings
 
 logging.basicConfig(filename='logs/ui.log',level=logging.DEBUG)
 
@@ -41,77 +44,82 @@ def get_cluster_ip():
 CLUSTER_NAME = get_cluster_name()
 CLUSTER_IP = get_cluster_ip()
 
-PROJECT_FOLDER = "/teits"
-ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
+PROJECT_FOLDER = settings.PROJECT_FOLDER
+ROOT_PATH = CLUSTER_NAME + settings.PROJECT_FOLDER
+RECORDING_FOLDER = settings.RECORDING_FOLDER
+VIDEO_STREAM = settings.VIDEO_STREAM
+POSITIONS_STREAM = settings.POSITIONS_STREAM
+OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
+DRONEDATA_TABLE = settings.DRONEDATA_TABLE
+ZONES_TABLE = settings.ZONES_TABLE
+RECORDING_STREAM = settings.RECORDING_STREAM
 
-ZONES_TABLE =  ROOT_PATH + '/zones_table'   # Zones table path
-POSITIONS_TABLE = ROOT_PATH + '/positions_table'  # Path for the table that stores positions information
-DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores drone data
-SETTINGS_TABLE = ROOT_PATH + '/settings_table' # Path for the application settings
 
-VIDEO_STREAM = ROOT_PATH + '/video_stream'   # Video stream path
-POSITIONS_STREAM = ROOT_PATH + '/positions_stream'   # Positions stream path
-OFFSET_RESET_MODE = 'latest' # earliest or latest
-VIDEO_SLEEP_TIME = 0.0 # in second, used as speed control for re playing existing video
 DISPLAY_STREAM_NAME = "raw" # "raw" for original images, "faces" for face detection
+VIDEO_SLEEP_TIME = 0.0 # in second, used as speed control for re playing existing video
+
+
+RECORD_VIDEO = False
+RECORD_NAME = None
 
 
 # Create database connection
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
-positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 
 
-UPLOAD_FOLDER = 'static'
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+# UPLOAD_FOLDER = 'static'
+# ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
   
-if args.reset:
-  # Reset positions stream
-  os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
-  print("positions stream deleted")
+# if args.reset:
+#   # Reset positions stream
+#   os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
+#   print("positions stream deleted")
 
-  # Reset video stream
-  os.system('maprcli stream delete -path ' + VIDEO_STREAM)
-  print("video stream deleted")
+#   # Reset video stream
+#   os.system('maprcli stream delete -path ' + VIDEO_STREAM)
+#   print("video stream deleted")
 
-  # Init drone position
-  print("Positions table deleted")
-  os.system('maprcli table delete -path ' + POSITIONS_TABLE)
+#   # Init drone position
+#   print("Positions table deleted")
+#   os.system('maprcli table delete -path ' + POSITIONS_TABLE)
   
 
 
 
-# Configure positions stream
-if not os.path.islink(POSITIONS_STREAM):
-    logging.debug("creating stream {}".format(POSITIONS_STREAM))
-    os.system('maprcli stream create -path ' + POSITIONS_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-    logging.debug("stream created")
+# # Configure positions stream
+# if not os.path.islink(POSITIONS_STREAM):
+#     logging.debug("creating stream {}".format(POSITIONS_STREAM))
+#     os.system('maprcli stream create -path ' + POSITIONS_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+#     logging.debug("stream created")
+
+
+# # Configure video stream
+# if not os.path.islink(VIDEO_STREAM):
+#     logging.debug("creating stream {}".format(VIDEO_STREAM))
+#     os.system('maprcli stream create -path ' + VIDEO_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
+#     logging.debug("stream created")
+
+
+# def create_stream(stream_path):
+#   if not os.path.islink(stream_path):
+#     os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
 
 
 # Positions stream. Each drone has its own topic
 logging.debug("creating producer for {}".format(POSITIONS_STREAM))
 positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
-
-
-# Configure video stream
-if not os.path.islink(VIDEO_STREAM):
-    logging.debug("creating stream {}".format(VIDEO_STREAM))
-    os.system('maprcli stream create -path ' + VIDEO_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-    logging.debug("stream created")
-
-
-def create_stream(stream_path):
-  if not os.path.islink(stream_path):
-    os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-
+recording_producer = Producer({'streams.producer.default.stream': RECORDING_STREAM})
 
 def stream_video(drone_id):
     global VIDEO_STREAM
     global OFFSET_RESET_MODE
     global DISPLAY_STREAM_NAME
+    global RECORD_VIDEO
+    global RECORD_NAME
 
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
@@ -119,7 +127,6 @@ def stream_video(drone_id):
     consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
     current_stream = DISPLAY_STREAM_NAME
     while True:
-        # print(DISPLAY_STREAM_NAME)
         if DISPLAY_STREAM_NAME != current_stream:
           consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
           current_stream = DISPLAY_STREAM_NAME
@@ -130,6 +137,13 @@ def stream_video(drone_id):
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
+            if RECORD_VIDEO:
+                print("recording frame {} for {}".format(json_msg["index"],RECORD_NAME))
+                new_image = RECORDING_FOLDER + RECORD_NAME + "/frame-{}".format(json_msg["index"])
+                copyfile(image,new_image)
+                record_message = deepcopy(json_msg)
+                record_message["image"] = new_image
+                recording_producer.produce(RECORD_NAME, json.dumps(record_message))
             try:
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
@@ -150,7 +164,7 @@ def stream_video(drone_id):
 
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 ###################################
@@ -173,7 +187,7 @@ def set_drone_position():
     action = "wait"
 
   try:
-    current_position = positions_table.find_by_id(drone_id)
+    current_position = dronedata_table.find_by_id(drone_id)["position"]
     from_zone = current_position["zone"]
     current_status = current_position["status"]
   except:
@@ -193,7 +207,7 @@ def set_drone_position():
 def get_position():
   drone_id = request.form["drone_id"]
   try:
-    position = positions_table.find_by_id(drone_id)["zone"]
+    position = dronedata_table.find_by_id(drone_id)["position"]["zone"]
   except:
     position = "unpositionned"
   return position
@@ -207,7 +221,7 @@ def get_next_waypoint():
       waypoints.append(zone["_id"])
 
   drone_id = request.form["drone_id"]
-  current_position = positions_table.find_by_id(drone_id)["zone"]
+  current_position = dronedata_table.find_by_id(drone_id)["position"]["zone"]
   print("current : {}".format(current_position))
   
   if current_position == "home_base":
@@ -333,6 +347,8 @@ def edit():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
+  for zone in zones_table.find():
+    print(zone)
 
   return render_template("edit_ui.html",zones=zones_table.find())
 
@@ -381,6 +397,40 @@ def set_zone_position():
   return json.dumps(zone_doc)
 
 
+@app.route('/recorder')
+def recorder():
+  return render_template("recorder.html")
+
+
+@app.route('/delete_recording',methods=["POST"])
+def delete_recording():
+    global RECORD_VIDEO
+    RECORD_NAME = request.form["zone_name"]
+    RECORD_VIDEO = False
+    print("Deleting {} recordings")
+    try:
+        os.system("rm -rf {}".format(RECORDING_FOLDER + RECORD_NAME))
+        os.system("maprcli stream delete topic -path " + RECORDING_STREAM + " -topic " + RECORD_NAME)
+    except: 
+        traceback.print_exc()
+    return "ok"
+
+@app.route('/start_recording',methods=["POST"])
+def start_recording():
+    global RECORD_VIDEO
+    global RECORD_NAME
+    RECORD_NAME = request.form["zone_name"]
+    os.system("mkdir -p {}".format(RECORDING_FOLDER + RECORD_NAME))
+    RECORD_VIDEO = True
+    return "ok"
+
+@app.route('/stop_recording',methods=["POST"])
+def stop_recording():
+    global RECORD_VIDEO
+    global RECORD_NAME
+    RECORD_VIDEO = False
+    RECORD_NAME = None
+    return "ok"
 
 
 app.run(debug=True,host='0.0.0.0',port=80)

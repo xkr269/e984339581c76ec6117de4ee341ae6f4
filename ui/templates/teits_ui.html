@@ -10,24 +10,24 @@
 </head>
 <body> 
   <div id="main" class="row h-100">
-      <div class="col-6" >
-        <div class="row" id="command_buttons">
-          <div class="col-3">
-            <button id="new_drone_button" class="btn btn-sm">New Drone</button>
-          </div>
-          <div class="col-3">
-            <button id="patrol_button" class="btn btn-sm">Patrol</button>
-          </div>
-          <div class="col-3">
-            <button id="back_home_button" class="btn btn-sm">Back Home</button>
-          </div>
-          <div class="col-3">
-            <select class="form-control btn-sm" id="video_stream_selector">
-             <option value=raw>Source</option>
-             <option value=faces>Processed</option>
-            </select>
-          </div>
-        </div> 
+      <div class="col-1 offset-1">
+        <div class="row">
+          <button id="new_drone_button">New Drone</button>
+        </div>
+        <div class="row">
+          <button id="patrol_button">Patrol</button>
+        </div>
+        <div class="row">
+          <button id="back_home_button">Back Home</button>
+        </div>
+        <div class="row">
+          <select class="form-control" id="video_stream_selector">
+           <option value=raw>Source</option>
+           <option value=faces>Processed</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-5" >
         <div class="row" id="main_map">
           {% for zone in zones %}
             <div class="border-visible drop zone"
@@ -41,48 +41,26 @@
 
         </div>
         <div class="row" drone_id="global">
-          <div class="col-4 count" id="global_count"></div>
+          <div class="col-4" id="global_count"></div>
           <div class="col-8" id="global_count_graph"></div>
         </div>
       </div>
       <div class="col-1"></div>
-      <div class="col-5" id="control_panel">
-        <div class="row drone_ui border-visible" id="drone_1_ui" drone_id="drone_1">
+      <div class="col-4" id="control_panel">
+        {% for n in range(1,4) %}
+        <div class="row drone_ui" id="drone_{{n}}_ui" drone_id="drone_{{n}}">
             <div class="drone_info"></div>
-            <div class="count" id="drone_1_count"></div>
-            <div class="battery_pct" id="drone_1_battery"></div>
-            <div class="battery_gauge" id="drone_1_battery_gauge"></div>
-            <div class="speed" id="drone_1_speed"></div>
-            <div class="speed_gauge" id="drone_1_speed_gauge"></div>
-            <div class="count_graph" id="drone_1_count_graph"></div>
-            <div class="connection_status blink" id="drone_1_connection_status"></div>
+            <div class="count" id="drone_{{n}}_count"></div>
+            <div class="battery_pct" id="drone_{{n}}_battery"></div>
+            <div class="battery_gauge" id="drone_{{n}}_battery_gauge"></div>
+            <div class="speed" id="drone_{{n}}_speed"></div>
+            <div class="speed_gauge" id="drone_{{n}}_speed_gauge"></div>
+            <div class="count_graph" id="drone_{{n}}_count_graph"></div>
+            <div class="connection_status blink" id="drone_{{n}}_connection_status"></div>
             <div class="connection_status_video blink"></div>
-            <img src="video_stream/drone_1" class="drone_video">
+            <img class="drone_video">
         </div>
-        <div class="row drone_ui border-visible" id="drone_2_ui" drone_id="drone_2">
-            <div class="drone_info"></div>
-            <div class="count" id="drone_2_count"></div>
-            <div class="battery_pct" id="drone_2_battery"></div>
-            <div class="battery_gauge" id="drone_2_battery_gauge"></div>
-            <div class="speed" id="drone_2_speed"></div>
-            <div class="speed_gauge" id="drone_2_speed_gauge"></div>
-            <div class="count_graph" id="drone_2_count_graph"></div>
-            <div class="connection_status blink" id="drone_2_connection_status"></div>
-            <div class="connection_status_video blink"></div>
-            <img src="video_stream/drone_2" class="drone_video">
-        </div>
-        <div class="row drone_ui border-visible" id="drone_3_ui" drone_id="drone_3">
-            <div class="drone_info"></div>
-            <div class="count" id="drone_3_count"></div>
-            <div class="battery_pct" id="drone_3_battery"></div>
-            <div class="battery_gauge" id="drone_3_battery_gauge"></div>
-            <div class="speed" id="drone_3_speed"></div>
-            <div class="speed_gauge" id="drone_3_speed_gauge"></div>
-            <div class="count_graph" id="drone_3_count_graph"></div>
-            <div class="connection_status blink" id="drone_3_connection_status"></div>
-            <div class="connection_status_video blink"></div>
-            <img src="video_stream/drone_3" class="drone_video">
-        </div>
+        {% endfor %}
       </div> 
   </div>
 </body>

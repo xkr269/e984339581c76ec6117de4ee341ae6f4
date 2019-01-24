@@ -26,33 +26,6 @@ function set_drone_position(drone_id,drop_zone,action){
 }
 
 
-
-function set_zone_position(zone_id,top,left){
-    $.ajax({
-            url: 'set_zone_position',
-            type: 'post',
-            data: {"zone_id":zone_id,"top":top,"left":left},
-            success:function(data){
-                console.log(data)
-            }
-        });
-}
-
-function update_zone_coordinates(zone_id){
-    $.ajax({
-            url: 'get_zone_coordinates',
-            type: 'post',
-            data: {"zone_id":zone_id},
-            success:function(data){
-                coordinates = JSON.parse(data);
-                console.log(coordinates)
-                $("#zone_x").val(coordinates.x);
-                $("#zone_y").val(coordinates.y);
-            }
-        });
-}
-
-
 $('.drop.zone').droppable({
     drop : function(e,ui){
         var drop_zone = $(this).attr('id');
@@ -73,17 +46,6 @@ $('.drop.zone').click(function(e){
 });
 
 
-$('#main_map.drop').droppable({
-    drop : function(e,ui){
-        var zone_id = ui.draggable.attr('id');
-        var top = ui.draggable.offset().top / ui.draggable.parent().height() * 100;
-        var left = ui.draggable.offset().left / ui.draggable.parent().width() * 100;
-        console.log(top);
-        console.log(left);
-        set_zone_position(zone_id,top,left); 
-        save_zone();
-    },
-}); 
 
 
 
@@ -115,6 +77,7 @@ $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
             $("#drone_1").show()
             $("#drone_1_ui").show();
+            $("#drone_1_video").setAttr("src","video_stream/drone_1");
             draw_chart("drone_1_count_graph","drone_1_count");
             set_drone_position("drone_1","home_base","takeoff");
 
@@ -122,12 +85,14 @@ $("#new_drone_button").click(function(){
         else if (!$("#drone_2_ui").is(":visible")){
             $("#drone_2").show()
             $("#drone_2_ui").show();
+            $("#drone_2_video").setAttr("src","video_stream/drone_2");
             draw_chart("drone_2_count_graph","drone_2_count");
             set_drone_position("drone_2","home_base","takeoff");
         }
         else {
             $("#drone_3").show()
             $("#drone_3_ui").show();
+            $("#drone_3_video").setAttr("src","video_stream/drone_3");
             draw_chart("drone_3_count_graph","drone_3_count");
             set_drone_position("drone_3","home_base","takeoff");
 
@@ -173,58 +138,7 @@ function patrol(){
     }
 }
 
-function save_zone(){
-    $.ajax({
-            url: 'save_zone',
-            type: 'post',
-            data: {"zone_name":$("#zone_name").val(),
-                    "zone_width":$("#zone_width").val(),
-                    "zone_height":$("#zone_height").val(),
-                    "zone_top":$("#zone_top").val(),
-                    "zone_left":$("#zone_left").val(),
-                    "zone_x":$("#zone_x").val(),
-                    "zone_y":$("#zone_y").val(),
-                    },
-            success:function(data){
-                location.reload();
-            }
-        });
-}
 
-$("#zone_save").click(function(){
-        save_zone();
-})
-
-
-$("#zone_delete").click(function(){
-        $.ajax({
-            url: 'delete_zone',
-            type: 'post',
-            data: {"zone_name":$("#zone_name").val()
-                    },
-            success:function(data){
-                console.log(data);
-                location.reload();
-            }
-        });
-})
-
-
-function update_zone_info(zone_id){
-    var zone_div = $("#"+zone_id);
-    $("#zone_name").val(zone_div.attr("id"));
-    $("#zone_height").val(Math.round(zone_div.height()/zone_div.parent().height()*100));
-    $("#zone_width").val(Math.round(zone_div.width()/zone_div.parent().width()*100));
-    $("#zone_top").val(Math.round(zone_div.offset().top/zone_div.parent().height()*100));
-    $("#zone_left").val(Math.round(zone_div.offset().left/zone_div.parent().width()*100));
-}
-
-$(".zone.drag").click(function(){
-    console.log("update");
-    var zone_id = $(this).attr("id")
-    update_zone_info(zone_id);
-    update_zone_coordinates(zone_id);
-})
 
 $( document ).ready(function() {
     var hb = $("#home_base");
@@ -242,6 +156,7 @@ $( document ).ready(function() {
     update_battery();
     update_speed();
     update_count();
+    update_global_count();
     update_connection_status(); 
     draw_chart("global_count_graph","global_count");
 });
@@ -283,18 +198,34 @@ function update_speed(){
 
 }
 
+function update_global_count(){
+    var count = 0;
+    $(".count").each(function(){
+        var div = $(this);
+        if(div.is(":visible")){
+            count = count + Number(div.text());
+            console.log(count);
+        }
+    });
+    $("#global_count").text(count);
+    setTimeout(function(){
+        update_global_count();
+    }, DISPLAY_COUNT_TIMER);
+}
 
 function update_count(){
     $(".count").each(function(){
         var div = $(this);
-        $.ajax({
-            url: 'get_count',
-            type: 'post',
-            data: {"drone_id":div.parent().attr("drone_id")},
-            success:function(data){
-                div.text(data);
-            }
-        });
+        if(div.is(":visible")){
+            $.ajax({
+                url: 'get_count',
+                type: 'post',
+                data: {"drone_id":div.parent().attr("drone_id")},
+                success:function(data){
+                    div.text(data);
+                }
+            });
+        }
     });
     setTimeout(function(){
             update_count();

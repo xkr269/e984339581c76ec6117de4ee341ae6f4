@@ -1,0 +1,16 @@
+#! /usr/bin/python
+
+"""
+Settings files for TEITS demo project
+"""
+
+CLUSTER_NAME = get_cluster_name()
+CLUSTER_IP = get_cluster_ip()
+PROJECT_FOLDER = "/teits"
+ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
+DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores drone data
+PROCESSORS_TABLE = ROOT_PATH + '/processors_table'  # Path for the table that stores processor info
+PROCESSORS_STREAM = ROOT_PATH + '/processors_stream'   # Output Stream path
+OUTPUT_STREAM = ROOT_PATH + '/video_stream'   # Output Stream path
+OUTPUT_TOPIC = "default"
+ALLOWED_LAG = 2 # second

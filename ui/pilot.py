@@ -22,7 +22,10 @@ import time
 from time import sleep
 import os
 import sys
-import av
+try:
+    import av
+except:
+    pass
 import tellopy
 import json
 import threading
@@ -30,15 +33,22 @@ from random import randint
 from confluent_kafka import Producer, Consumer, KafkaError
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from math import atan2, sqrt, pi, floor
+from shutil import copyfile
+
+import settings
 
 
 DRONE_ID = sys.argv[1]
 FPS =10.0
-PROJECT_FOLDER = "/teits"
+SOURCE_FPS = 30.0
+PROJECT_FOLDER = settings.PROJECT_FOLDER
 DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
+
+# Wait ratios
 FORWARD_COEF = 3 # Time taken to move 1m
 ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
-SIMUL_MODE = True
+
+SIMUL_MODE = True # when True, the drone doesn't actually fly.
 
 
 def get_cluster_name():
@@ -59,16 +69,14 @@ def check_stream(stream_path):
 CLUSTER_NAME = get_cluster_name()
 CLUSTER_IP = get_cluster_ip()
 
-ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
-
+ROOT_PATH = settings.ROOT_PATH
 IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
-VIDEO_STREAM = ROOT_PATH + "/video_stream"
-POSITIONS_STREAM = ROOT_PATH + "/positions_stream"
-FLIGHT_DATA_STREAM = ROOT_PATH + "/flight_data_stream"
-DRONEDATA_TABLE = ROOT_PATH + "/dronedata_table"
-ZONES_TABLE = ROOT_PATH + "/zones_table"
-POSITIONS_TABLE = ROOT_PATH + "/positions_table"
-SETTINGS_TABLE = ROOT_PATH + "/settings_table"
+VIDEO_STREAM = settings.VIDEO_STREAM
+POSITIONS_STREAM = settings.POSITIONS_STREAM
+DRONEDATA_TABLE = settings.DRONEDATA_TABLE
+ZONES_TABLE = settings.ZONES_TABLE
+RECORDING_STREAM = settings.RECORDING_STREAM
+RECORDING_FOLDER = settings.RECORDING_FOLDER
 
 current_angle = 0.0
 
@@ -76,7 +84,6 @@ current_angle = 0.0
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
-positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":"unset","log_data":"unset","count":0,"connection_status":"disconnected"})
 
@@ -87,8 +94,6 @@ if not os.path.exists(IMAGE_FOLDER):
 # create sreams if needed
 check_stream(VIDEO_STREAM)
 check_stream(POSITIONS_STREAM)
-check_stream(FLIGHT_DATA_STREAM)
-
 
 
 #######################    VIDEO PROCESSING    ##################
@@ -134,15 +139,88 @@ def get_drone_video(drone):
                     current_sec = int(elapsed_time)
 
     # Catch exceptions
-    except Exception as ex:
-        print(ex)
+    except Exception:
+        traceback.print_exc()
+
+
+def stream_recording():
+    global FPS
+    global DRONE_ID
+    global VIDEO_STREAM
+    global IMAGE_FOLDER
+    global RECORDING_STREAM
+    global RECORDING_FOLDER
+
+    print("Producing video from records into {}".format(VIDEO_STREAM))
+    video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
+    consumer_group = str(time.time())
+    video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
+    current_sec = 0
+    last_frame_time = 0
+
+    stream_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+
+    try:
+        start_time = time.time()
+        received_frames = 0
+        sent_frames = 0
+        video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+        while True:
+            current_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+            if current_zone != stream_zone:
+                stream_zone = current_zone
+                consumer_group = str(time.time())
+                video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+
+            msg = video_consumer.poll(timeout=1)
+
+
+            if msg is None :
+                consumer_group = str(time.time())
+                video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+                continue
+
+            if not msg.error():
+                json_msg = json.loads(msg.value().decode('utf-8'))
+                print(json_msg)
+                received_frames += 1
+                current_time = time.time()
+                if current_time > (last_frame_time + float(1/FPS)):
+                    frame_index = json_msg["index"]
+                    source_image = json_msg["image"]
+                    new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame_index)
+                    copyfile(source_image,new_image)
+                    video_producer.produce(DRONE_ID+"_raw", json.dumps({"drone_id":DRONE_ID,
+                                                                        "index":frame_index,
+                                                                        "image":new_image}))
+                    sent_frames += 1
+                    last_frame_time = time.time()
+
+            elif msg.error().code() == KafkaError._PARTITION_EOF:
+                consumer_group = str(time.time())
+                video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+                continue
+
+            # Print stats every second
+            elapsed_time = time.time() - start_time
+            if int(elapsed_time) != current_sec:
+                print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                received_frames = 0
+                sent_frames = 0
+                current_sec = int(elapsed_time)
+            time.sleep(1/SOURCE_FPS)
+
+    # Catch exceptions
+    except Exception:
+        traceback.print_exc()
 
 
 #######################    MOVE PROCESSING    ##################
 
 def move_to_zone(drone,start_zone,drop_zone):
     global current_angle
-    print("###############      moving from {} to {}".format(start_zone,drop_zone))
+
+    print("...   moving from {} to {}".format(start_zone,drop_zone))
     # get start_zone coordinates
     current_position_document = zones_table.find_by_id(start_zone)
     current_position = (float(current_position_document["x"]),float(current_position_document["y"]))
@@ -214,26 +292,22 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         if abs(offset) > 0:
             print("###############      turning {} degrees".format(angle))
-            if not SIMUL_MODE:
+            if not (settings.EMULATE_DRONES or SIMUL_MODE):
                 drone.turn(offset)
             print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
             time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
 
         # deplacement        
         if distance > 0 :
-            if not SIMUL_MODE:
-                move(distance)
+            move(distance)
             print("sleep {}".format(max(1,distance * FORWARD_COEF)))
             time.sleep(max(1,distance * FORWARD_COEF))
 
         current_angle += offset
 
-    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":drop_zone, "status":"flying","offset":current_angle})
-
 
 def set_homebase():
-    # current_zone = positions_table.find_by_id(DRONE_ID)["zone"]
-    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":"home_base", "status":"landed","offset":current_angle})
+    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":"home_base", "status":"landed","offset":current_angle}}})
 
 
 
@@ -280,22 +354,21 @@ def main():
 
     global current_angle
 
-    drone = tellopy.Tello() 
     set_homebase() # reset drone position in the positions table
 
-    # subscribe to flight data
-    drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
-    # drone.subscribe(drone.EVENT_LOG_DATA, handler)
+    if not settings.EMULATE_DRONES:
+        drone = tellopy.Tello() 
+        drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+        drone.connect()
+        drone.wait_for_connection(600)
 
-    drone.connect()
-    drone.wait_for_connection(600)
     dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
 
-    # drone.set_loglevel("LOG_DEBUG")
-
-
     # create video thread
-    videoThread = threading.Thread(target=get_drone_video,args=[drone])
+    if settings.EMULATE_DRONES:
+        videoThread = threading.Thread(target=stream_recording)
+    else:
+        videoThread = threading.Thread(target=get_drone_video,args=[drone])
     videoThread.start()
 
 
@@ -306,67 +379,75 @@ def main():
 
     while True:
         try:
-            print("waiting for instructions - drone state = {}".format(drone.state))
+            print("waiting for instructions - drone state = {}".format(dronedata_table.find_by_id(DRONE_ID)["connection_status"]))
             msg = positions_consumer.poll(timeout=1)
             if msg is None:
                 # Check that Drone is still connected
                 # if not, restarts.
-                if drone.state != drone.STATE_CONNECTED:
-                    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "disconnected"}})
+                if not settings.EMULATE_DRONES:
+                    if drone.state != drone.STATE_CONNECTED:
+                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "disconnected"}})
 
-                if drone.state == drone.STATE_QUIT:
-                    drone.sock.close()
-                    while videoThread.isAlive() or drone.video_thread_running:
-                        print("wait for threads to stop")
-                        time.sleep(1)
-                    print("reconnecting #######################")
-                    drone = tellopy.Tello()
-                    drone.connect()
-                    drone.wait_for_connection(600)
-                    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
-                    print("connected - starting video thread")
-                    # recreate video thread
-                    videoThread = threading.Thread(target=get_drone_video,args=[drone])
-                    videoThread.start()
+                    if drone.state == drone.STATE_QUIT:
+                        drone.sock.close()
+                        while videoThread.isAlive() or drone.video_thread_running:
+                            print("wait for threads to stop")
+                            time.sleep(1)
+                        print("reconnecting ...")
+                        drone = tellopy.Tello()
+                        drone.connect()
+                        drone.wait_for_connection(600)
+                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
+                        print("connected - starting video thread")
+                        # recreate video thread
+                        videoThread = threading.Thread(target=get_drone_video,args=[drone])
+                        videoThread.start()
                 continue
+
+            # Proceses moving instructions
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
                 print(json_msg)
-                from_zone = positions_table.find_by_id(DRONE_ID)["zone"]
+                from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
                 drop_zone = json_msg["drop_zone"]
                 
                 if json_msg["action"] == "takeoff":
-                    print("###############      Takeoff")
-                    if not SIMUL_MODE:
+                    print("...  Takeoff")
+                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
                         drone.takeoff()
                         time.sleep(5)
-                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"flying","offset":current_angle})
+
+                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"flying","offset":current_angle}}})
 
                 if drop_zone != from_zone:
-                    move_to_zone(drone,from_zone,drop_zone)
-                    print("###############      Moved")
+                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
+                        move_to_zone(drone,from_zone,drop_zone)
+                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":drop_zone, "status":"flying","offset":current_angle}}})
+
+                    print("...  Moved")
                     
                 if json_msg["action"] == "land":
-                    print("###############      Land")
-                    drone.land()
-                    positions_table.insert_or_replace(doc={'_id': DRONE_ID, "zone":from_zone, "status":"landed","offset":current_angle})
+                    print("...    Land")
+                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
+                        drone.land()
+                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"landed","offset":current_angle}}})
+
                     time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:
                 print(msg.error())
 
         except KeyboardInterrupt:
-            print "test"
             break   
 
         except Exception as ex:
             print("@@@@@@@@@@@@@@@       EXCEPTION      @@@@@@@@@@@@@@@")
-            print(ex)
             traceback.print_exc()
 
-    print("QUITTING $$$$$$$$$$$$$")
+    print("QUITTING")
 
-    drone.quit()
+    if not settings.EMULATE_DRONES:
+        drone.quit()
 
 
     sys.exit()

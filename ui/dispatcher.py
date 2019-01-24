@@ -43,7 +43,7 @@ CLUSTER_NAME = get_cluster_name()
 CLUSTER_IP = get_cluster_ip()
 ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
 SOURCE_STREAM = ROOT_PATH + "/video_stream"
-SOURCE_TOPIC = "drone_1_raw"
+SOURCE_TOPIC = "raw_*"
 PROCESSORS_STREAM = ROOT_PATH + "/processors_stream"
 PROCESSORS_TABLE = ROOT_PATH + "/processors_table"
 
@@ -68,7 +68,7 @@ def main():
     # Subscribe to source stream on given topics
     consumer_group = str(time.time())
     main_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
-    main_consumer.subscribe([SOURCE_STREAM + ":" + SOURCE_TOPIC]) 
+    main_consumer.subscribe([SOURCE_STREAM + ":drone_1_raw",SOURCE_STREAM + ":drone_2_raw",SOURCE_STREAM + ":drone_3_raw",]) 
     producer = Producer({'streams.producer.default.stream': PROCESSORS_STREAM})
 
     # Initialize offset

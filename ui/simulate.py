@@ -1,4 +1,15 @@
-# Replayer
+#! /usr/bin/python
+
+"""
+
+Drone simulator
+
+Relies on a collection of recorded video streams to emulate a real drone sending videos
+
+Launch using the drone id as a CLI parameter
+
+
+"""
 
 import sys
 import os
@@ -27,13 +38,12 @@ DRONE_ID = sys.argv[1]
 
 CLUSTER_NAME = get_cluster_name()
 CLUSTER_IP = get_cluster_ip()
-PROJECT_FOLDER = "/teits"
-ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
-SOURCE_STREAM = ROOT_PATH + "/video_stream"
+ROOT_PATH = settings.ROOT_PATH
 IMAGE_FOLDER = ROOT_PATH + "/" + DRONE_ID + "/images/source/"
-DRONEDATA_TABLE = ROOT_PATH + "/dronedata_table"
-POSITIONS_TABLE = ROOT_PATH + "/positions_table"
-POSITIONS_STREAM = ROOT_PATH + "/positions_stream"
+VIDEO_STREAM = settings.VIDEO_STREAM
+POSITIONS_STREAM = settings.POSITIONS_STREAM
+DRONEDATA_TABLE = settings.DRONEDATA_TABLE
+ZONES_TABLE = settings.ZONES_TABLE
 
 
 # Create database connection
@@ -71,11 +81,10 @@ def video_generator():
     print("done")
 
     while generate_video:
-        print("aa")
         for filename in files:
             print(filename)
             index = int(filename.split('/')[-1].split('.')[0].split('-')[1])
-            producer.produce(DRONE_ID+"_raw", json.dumps({"drone_id":DRONE_ID,
+            producer.produce(DRONE_ID + "_raw", json.dumps({"drone_id":DRONE_ID,
                                                           "index":index,
                                                           "image":IMAGE_FOLDER + "frame-{}.jpg".format(index)}))
 
