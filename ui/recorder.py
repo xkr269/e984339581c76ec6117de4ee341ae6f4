@@ -56,11 +56,19 @@ def get_drone_video(drone):
     container = av.open(drone.get_video_stream())
     try:
         start_time = time.time()
+        total_frames = 0
         received_frames = 0
         sent_frames = 0
+        frame_skip = 400
+
         while drone.state != drone.STATE_QUIT:
             print("Drone is connected - decoding container")
             for frame in container.decode(video=0):
+                received_frames += 1
+                total_frames += 1
+                if total_frames < frame_skip:
+                    continue
+
                 recording_info = recording_table.find_by_id("recording")
                 RECORD_VIDEO = recording_info["status"]
                 CURRENT_ZONE = recording_info["zone"]
@@ -68,19 +76,19 @@ def get_drone_video(drone):
                 if drone.state != drone.STATE_CONNECTED:
                     print("Drone disconnected - QUITTING VIDEO THREAD ")
                     break
-                received_frames += 1
                 current_time = time.time()
                 if current_time > (last_frame_time + float(1/RECORDER_FPS)):
                     image = RECORDING_FOLDER + CURRENT_ZONE + "/frame-{}.jpg".format(frame.index) 
                     frame.to_image().save(image)
+                    print(RECORD_VIDEO)
                     if RECORD_VIDEO :
                         topic = CURRENT_ZONE
                     else:
                         topic = "temp"
-
+                    print(topic)
                     video_producer.produce(topic, json.dumps({"index":frame.index,
-                                                               "image":image}))
-                    
+                                                              "image":image}))
+
                     print("saved {} to {}".format(image,topic))
                     
                     sent_frames += 1
@@ -130,6 +138,7 @@ while True:
 
     except KeyboardInterrupt:
         break   
+
 
 
 drone.quit()

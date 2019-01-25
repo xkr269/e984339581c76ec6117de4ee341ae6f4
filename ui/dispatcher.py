@@ -13,39 +13,19 @@ by processors to release processed messages in the right order
 import time
 import json
 import traceback
-from random import randint
-from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka import Producer, Consumer
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 
+import settings
 
-############################       Utilities        #########################
-
-def get_cluster_name():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[0]
-
-def get_cluster_ip():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[2].split(':')[0]
-
-def check_stream(stream_path):
-  if not os.path.islink(stream_path):
-    print("stream {} is missing. Exiting.".format(stream_path))
-    sys.exit()
-    
 
 ############################       Settings        #########################
 
-PROJECT_FOLDER = "/teits"
-CLUSTER_NAME = get_cluster_name()
-CLUSTER_IP = get_cluster_ip()
-ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
-SOURCE_STREAM = ROOT_PATH + "/video_stream"
-SOURCE_TOPIC = "raw_*"
-PROCESSORS_STREAM = ROOT_PATH + "/processors_stream"
-PROCESSORS_TABLE = ROOT_PATH + "/processors_table"
+CLUSTER_IP = settings.CLUSTER_IP
+SOURCE_STREAM = settings.VIDEO_STREAM
+PROCESSORS_STREAM = settings.PROCESSORS_STREAM
+PROCESSORS_TABLE = settings.PROCESSORS_TABLE
+
 
 
 # Create database connection

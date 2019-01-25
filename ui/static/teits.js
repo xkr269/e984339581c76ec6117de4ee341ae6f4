@@ -1,8 +1,11 @@
+// js file for TEITS main UI
+
+
 var DISPLAY_COUNT_TIMER = 1000
 var DISPLAY_SPEED_TIMER = 1000
 var DISPLAY_CONNECTION_STATUS_TIMER = 1000
 var DISPLAY_BATTERY_TIMER = 5000
-var PATROL_TIMER = 3000
+var PATROL_TIMER = 5000
 var GRAPH_TIMER = 2000 
 var graph_color = "#6CFC5F"
 
@@ -37,9 +40,10 @@ $('.drop.zone').droppable({
 }); 
 
 $('.drop.zone').click(function(e){
+    var parentOffset = $(this).parent().offset(); 
     $('#drone_1').animate({
-            top : e.pageY - 44,
-            left: e.pageX - 35
+            top : e.pageY - parentOffset.top - $('#drone_1').height()/2,
+            left: e.pageX - parentOffset.left - $('#drone_1').width()/2
             }, 2000, function() {
                 var drop_zone = e.target.id;
                 var drone_id = "drone_1";
@@ -70,6 +74,38 @@ $("#back_home_button").click(function(){
         console.log("Stop patrolling");
         patrol_in_progess = false;
         if($(this).css('display')!='none'){move_to_position($(this).attr("id"),"home_base","land");}
+    })
+})
+
+$("#land_button").click(function(){
+    $(".drone").each(function(){
+        console.log("Landing");
+        patrol_in_progess = false;
+        drone_id = $(this).attr("id");
+        $.ajax({
+            url: 'land',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log(data)
+            }
+        });
+    })
+})
+
+$("#land_button").click(function(){
+    $(".drone").each(function(){
+        console.log("Landing");
+        patrol_in_progess = false;
+        drone_id = $(this).attr("id");
+        $.ajax({
+            url: 'reset_position',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log(data)
+            }
+        });
     })
 })
 
@@ -380,3 +416,6 @@ $( document ).ready(function() {
     refresh_global_count();
     draw_chart("global_count_graph","global_count");
 });
+
+
+

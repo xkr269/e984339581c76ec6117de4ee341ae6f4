@@ -247,3 +247,10 @@ button:active {
   width: 120vh;
   background-color:   black;
 }
+
+#status {
+  font-weight: bold;
+  font-size: 20px;
+  text-align: center;
+  color: red;
+}

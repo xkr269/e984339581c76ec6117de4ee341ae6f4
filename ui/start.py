@@ -18,16 +18,6 @@ import time
 import subprocess
 
 
-def get_cluster_name():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[0]
-
-def get_cluster_ip():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[2].split(':')[0]
-
 def launch_script(script_name,arg=None):
     if arg:
         return subprocess.Popen(["python", settings.ROOT_PATH + script_name,arg])
@@ -40,16 +30,16 @@ def terminate_process(process):
 
 print("Starting pre-flight checks ... ")
 
-
-print(settings.DATA_FOLDER)
-
 # Create folders
 if not os.path.exists(settings.DATA_FOLDER):
     os.makedirs(settings.DATA_FOLDER)
 
-print("Directory created")
+print("Data directory created")
+
 
 # Create streams
+
+print("Creating streams ...")
 
 def create_stream(stream_path):
   if not os.path.islink(stream_path):
@@ -80,15 +70,19 @@ processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/teits_ui.py"
 print("User interface started ... ")
 
 if settings.EMULATE_DRONES:
-    for i in [1]:
-        processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/pilot.py",arg="drone_"+str(i)))
-        print("Drone {} simulator started ... ".format(i)) 
+    for i in range(settings.ACTIVE_DRONES):
+        processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/pilot.py",arg="drone_"+str(i+1)))
+        print("Drone {} simulator started ... ".format(i+1))
+        time.sleep(1)
 
-# processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/dispatcher.py"))
-# print("Dispatcher started ... ")
-# for i in range(settings.NUMBER_OF_PROCESSORS):
-#     processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/processor.py"))
-#     print("Processor {} started ... ".format(i))
+
+processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/dispatcher.py"))
+print("Dispatcher started ... ")
+
+
+for i in range(settings.NUMBER_OF_PROCESSORS):
+    processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/processor.py"))
+    print("Processor {} started ... ".format(i+1))
 
 
 while True:

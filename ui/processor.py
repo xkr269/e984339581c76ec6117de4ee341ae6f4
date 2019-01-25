@@ -4,15 +4,14 @@
 
 Face Detection Processor
 
-Reads images from an input stream
+Reads images from the main video stream
 Detects faces on the image
-Writes processed images on an output stream
+Writes processed images to the main video steam
 
 
 """
 
 import cv2
-import sys
 import os
 import numpy
 import time
@@ -24,41 +23,23 @@ from random import randint
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from confluent_kafka import Consumer, KafkaError, Producer
 
-
-############################       Utilities        #########################
-
-def get_cluster_name():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[0]
-
-def get_cluster_ip():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[2].split(':')[0]
-
-def check_stream(stream_path):
-  if not os.path.islink(stream_path):
-    print("stream {} is missing. Exiting.".format(stream_path))
-    sys.exit()
-    
+import settings
 
 
 ############################       Settings        #########################
 
-OFFSET_RESET_MODE = 'latest'
-PROCESSOR_ID = "processor_" + str(int(time.time())) + str(randint(0,10000))
+OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
+PROCESSOR_ID = "processor_" + str(int(time.time())) + str(randint(0,10000)) # Generate processor UID
 
-CLUSTER_NAME = get_cluster_name()
-CLUSTER_IP = get_cluster_ip()
+CLUSTER_NAME = settings.CLUSTER_NAME
+CLUSTER_IP = settings.CLUSTER_IP
 PROJECT_FOLDER = "/teits"
 ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
-DRONEDATA_TABLE = ROOT_PATH + '/dronedata_table'  # Path for the table that stores drone data
-PROCESSORS_TABLE = ROOT_PATH + '/processors_table'  # Path for the table that stores processor info
-PROCESSORS_STREAM = ROOT_PATH + '/processors_stream'   # Output Stream path
-OUTPUT_STREAM = ROOT_PATH + '/video_stream'   # Output Stream path
-OUTPUT_TOPIC = "default"
-ALLOWED_LAG = 2 # second
+DRONEDATA_TABLE = settings.DRONEDATA_TABLE # Path for the table that stores drone data
+PROCESSORS_TABLE = settings.PROCESSORS_TABLE # Path for the table that stores processor info
+PROCESSORS_STREAM = settings.PROCESSORS_STREAM # Output Stream path
+OUTPUT_STREAM = settings.VIDEO_STREAM
+ALLOWED_LAG = settings.ALLOWED_LAG
 
 
 # Build Ojai MapRDB access
@@ -85,7 +66,7 @@ faceCascade = cv2.CascadeClassifier(cascPath)
 def processing_function(message):
     global faceCascade
 
-    print("processing {}".format(message["image"]))
+    # print("processing {}".format(message["image"]))
     image_array = numpy.array(Image.open(message["image"]))
     image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -151,8 +132,8 @@ while True:
             print("Message {} - offset {} processed".format(received_msg["index"],offset))
             if not display_wait:
                 print("Wait time : {}".format(time.time() - check_time))
-            OUTPUT_TOPIC = processed_message["drone_id"] + "_faces"
-            producer.produce(OUTPUT_TOPIC,json.dumps(processed_message))
+            topic = processed_message["drone_id"] + "_faces"
+            producer.produce(topic,json.dumps(processed_message))
 
             # Commit offset
             processors_table.insert_or_replace({"_id":"offset","offset":offset})
@@ -160,6 +141,7 @@ while True:
             # Set processor as available
             print("Set {} as available".format(PROCESSOR_ID))
             processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
+
 
         except KeyboardInterrupt:
             break   

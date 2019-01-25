@@ -22,7 +22,7 @@ $('#recorder_btn').click(function(){
         $.ajax({
             url: 'start_recording',
             type: 'post',
-            data: {"zone_name":$("#zone_name").val()
+            data: {"zone_name":$("#zone_selector").val()
                     },
             success:function(data){
                 button.html("STOP");
@@ -40,6 +40,7 @@ $('#recorder_btn').click(function(){
                 button.html("START");
                 $("#status").html("");
                 clearInterval(timer);
+                current_timer = 0;
             }
         });
     }
@@ -50,12 +51,15 @@ $('#delete_btn').click(function(){
     $.ajax({
         url: 'delete_recording',
         type: 'post',
-        data: {"zone_name":$("#zone_name").val()
+        data: {"zone_name":$("#zone_selector").val()
                 },
         success:function(data){
             $("#recorder_btn").text("START");
             $("#status").html("Deleted");
             clearInterval(timer);
+            setTimeout(function(){
+                $("#status").html("");
+            },3000);
         }
     });
 }); 

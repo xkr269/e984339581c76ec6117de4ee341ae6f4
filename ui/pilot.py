@@ -177,9 +177,10 @@ def stream_recording():
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        print("subscribed to {} video stream".format(stream_zone))
+        print("{} subscribed to {} video stream".format(DRONE_ID,stream_zone))
         while True:
             current_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+            # print("current_zone = {}".format(current_zone))
             if current_zone != stream_zone:
                 stream_zone = current_zone
                 consumer_group = str(time.time())
@@ -191,7 +192,7 @@ def stream_recording():
 
 
             if msg is None :
-                print("timeout")
+                # print("timeout")
                 consumer_group = str(time.time())
                 video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
@@ -390,6 +391,9 @@ def main():
     if EMULATE_DRONES:
         videoThread = threading.Thread(target=stream_recording)
     else:
+        # subscribe to flight data
+        drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
+
         videoThread = threading.Thread(target=get_drone_video,args=[drone])
     videoThread.start()
 
@@ -401,7 +405,7 @@ def main():
 
     while True:
         try:
-            print("waiting for instructions - drone state = {}".format(dronedata_table.find_by_id(DRONE_ID)["connection_status"]))
+            # print("waiting for instructions - drone state = {}".format(dronedata_table.find_by_id(DRONE_ID)["connection_status"]))
             msg = positions_consumer.poll(timeout=1)
             if msg is None:
                 # Check that Drone is still connected
@@ -452,6 +456,7 @@ def main():
                     print("...    Land")
                     if not (EMULATE_DRONES or SIMUL_MODE):
                         drone.land()
+                        print("landed")
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"landed","offset":current_angle}}})
 
                     time.sleep(5)

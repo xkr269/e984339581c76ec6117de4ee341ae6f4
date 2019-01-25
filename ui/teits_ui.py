@@ -219,20 +219,10 @@ def get_speed():
   drone_id = request.form["drone_id"]
   if drone_id == "drone_1":
     try:
-      # log_data = dronedata_table.find_by_id(drone_id)["log_data"]
-      # print(log_data)
-      # if log_data == "unset":
-      #   vel_x = 0
-      #   vel_y = 0
-      # else:
-      #   vel_x = float(log_data["mvo"]["vel_x"])
-      #   vel_y = float(log_data["mvo"]["vel_y"])
-      # speed = math.sqrt(vel_x * vel_x + vel_y*vel_y)
       speed = float(dronedata_table.find_by_id(drone_id)["flight_data"]["fly_speed"])
     except Exception as ex:
       traceback.print_exc()
       speed = 0.0
-    # print(speed)
     return str(round(speed,2))
   return "0"
 
@@ -279,6 +269,25 @@ def get_connection_status():
 
 
 
+@app.route('/land',methods=["POST"])
+def land():
+    drone_id = request.form["drone_id"]
+    drone = dronedata_table.find_by_id(drone_id)
+    current_zone = drone["position"]["zone"]
+    message = {"drone_id":drone_id,"drop_zone":current_zone,"action":"land"}
+    positions_producer.produce(drone_id, json.dumps(message))
+    return "Landing order sent for {}".format(drone_id)
+
+
+@app.route('/reset_position',methods=["POST"])
+def reset_position():
+    drone_id = request.form["drone_id"]
+    dronedata_table.update(_id=drone_id,mutation={'$put': {'position.zone': "home_base"}})
+    message = {"drone_id":drone_id,"drop_zone":"home_base","action":"land"}
+    positions_producer.produce(drone_id, json.dumps(message))
+    return "Landing order sent for {}".format(drone_id)
+
+
 
 
 ###################################
@@ -302,8 +311,8 @@ def edit():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
-  for zone in zones_table.find():
-    print(zone)
+  # for zone in zones_table.find():
+  #   print(zone)
 
   return render_template("edit_ui.html",zones=zones_table.find())
 

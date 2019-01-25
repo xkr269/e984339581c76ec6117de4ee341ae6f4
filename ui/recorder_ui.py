@@ -52,7 +52,6 @@ def stream_video():
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
-            print(image)
             try:
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
@@ -74,8 +73,6 @@ app = Flask(__name__)
 
 @app.route('/')
 def recorder():
-    for zone in zones_table.find():
-        print(zone)
     return render_template("recorder.html",zones=zones_table.find())
 
 @app.route('/video_stream/')
@@ -87,10 +84,10 @@ def video_stream():
 def delete_recording():
     RECORD_NAME = request.form["zone_name"]
     recording_table.insert_or_replace({"_id":"recording","status":False,"zone":"temp"})
-    print("Deleting {} recordings")
+    print("Deleting {} recordings".format(RECORD_NAME))
     try:
         os.system("rm -rf {}".format(RECORDING_FOLDER + RECORD_NAME))
-        os.system("maprcli stream delete topic -path " + RECORDING_STREAM + " -topic " + RECORD_NAME)
+        os.system("maprcli stream topic delete -path " + RECORDING_STREAM + " -topic " + RECORD_NAME)
     except: 
         traceback.print_exc()
     return "ok"
@@ -98,6 +95,7 @@ def delete_recording():
 @app.route('/start_recording',methods=["POST"])
 def start_recording():
     RECORD_NAME = request.form["zone_name"]
+    print("Recording video for {}".format(RECORD_NAME))
     os.system("mkdir -p {}".format(RECORDING_FOLDER + RECORD_NAME))
     recording_table.insert_or_replace({"_id":"recording","status":True,"zone":RECORD_NAME})
     return "ok"
@@ -110,3 +108,11 @@ def stop_recording():
 
 
 app.run(debug=True,host='0.0.0.0',port=80)
+
+
+print("Cleaning temp data ...")
+os.system("rm -rf {}".format(RECORDING_FOLDER + "temp"))
+cl = "maprcli stream topic delete -path " + RECORDING_STREAM + " -topic " + "temp"
+print(cl)
+os.system(cl)
+print("Terminated.")
