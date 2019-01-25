@@ -14,7 +14,9 @@ $(function(){
     $('.drag').draggable({revert:"invalid",revertDuration: 300}); // appel du plugin
 });
 
+
 function set_drone_position(drone_id,drop_zone,action){
+    console.log("Set " + drone_id + " position to " + drop_zone + " , action : " + action)
     $.ajax({
             url: 'set_drone_position',
             type: 'post',
@@ -48,7 +50,6 @@ $('.drop.zone').click(function(e){
 
 
 
-
 function move_to_position(drone_id,zone_id,action){
     console.log("moving " + drone_id + " to " + zone_id);
     // Define zone center
@@ -68,7 +69,6 @@ $("#back_home_button").click(function(){
     $(".drone").each(function(){
         console.log("Stop patrolling");
         patrol_in_progess = false;
-        console.log($(this).css('display'));
         if($(this).css('display')!='none'){move_to_position($(this).attr("id"),"home_base","land");}
     })
 })
@@ -77,25 +77,33 @@ $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
             $("#drone_1").show()
             $("#drone_1_ui").show();
-            $("#drone_1_video").setAttr("src","video_stream/drone_1");
+            $("#drone_1_video").attr("src","video_stream/drone_1");
             draw_chart("drone_1_count_graph","drone_1_count");
             set_drone_position("drone_1","home_base","takeoff");
+            refresh_battery_pct("drone_1");
+            refresh_speed("drone_1");
+            refresh_count("drone_1");
 
         }
         else if (!$("#drone_2_ui").is(":visible")){
             $("#drone_2").show()
             $("#drone_2_ui").show();
-            $("#drone_2_video").setAttr("src","video_stream/drone_2");
+            $("#drone_2_video").attr("src","video_stream/drone_2");
             draw_chart("drone_2_count_graph","drone_2_count");
             set_drone_position("drone_2","home_base","takeoff");
+            refresh_battery_pct("drone_2");
+            refresh_speed("drone_2");
+            refresh_count("drone_2");
         }
         else {
             $("#drone_3").show()
             $("#drone_3_ui").show();
-            $("#drone_3_video").setAttr("src","video_stream/drone_3");
+            $("#drone_3_video").attr("src","video_stream/drone_3");
             draw_chart("drone_3_count_graph","drone_3_count");
             set_drone_position("drone_3","home_base","takeoff");
-
+            refresh_battery_pct("drone_3");
+            refresh_speed("drone_3");
+            refresh_count("drone_3");
         }
 })
 
@@ -105,8 +113,6 @@ $("#patrol_button").click(function(){
     patrol_in_progess = true;
     patrol();
 })
-
-
 
 
 function move_to_next_waypoint(drone_id){
@@ -122,6 +128,7 @@ function move_to_next_waypoint(drone_id){
         }
     });
 }
+
 
 function patrol(){
     console.log("Patroling");
@@ -140,95 +147,83 @@ function patrol(){
 
 
 
-$( document ).ready(function() {
-    var hb = $("#home_base");
-    var hb_top = hb.offset().top;
-    var hb_left = hb.offset().left;
-    var hb_height = hb.height();
-    var hb_width = hb.width();
-    $(".drone").each(function(){
-        $(this).css({top: hb_top + hb_height/2 - $(this).height()/2,
-                     left: hb_left + hb_width/2 - $(this).width()/2,
-                     position: 'absolute'});
-        });
-    $(".drone_ui").each(function(){if($(this).attr("id") != "drone_1_ui"){$(this).hide();}});
-    $(".drone").each(function(){$(this).hide();});
-    update_battery();
-    update_speed();
-    update_count();
-    update_global_count();
-    update_connection_status(); 
-    draw_chart("global_count_graph","global_count");
-});
-
-function update_battery(){
-    $(".drone_ui").each(function(){
-        var div = $(this);
-        $.ajax({
-            url: 'get_battery_pct',
-            type: 'post',
-            data: {"drone_id":div.attr("drone_id")},
-            success:function(data){
-                div.children(".battery_pct").text(data+"%");
-                set_battery(div.children(".battery_pct"));
-            }
-        });
+function refresh_battery_pct(drone_id){
+    $.ajax({
+        url: 'get_battery_pct',
+        type: 'post',
+        data: {"drone_id":drone_id},
+        success:function(data){
+            $("#"+drone_id+"_battery_pct").text(data+"%");
+            set_battery_gauge(drone_id);
+        }
     });
     setTimeout(function(){
-            update_battery();
-          }, DISPLAY_BATTERY_TIMER);
-
+        refresh_battery_pct(drone_id);
+    }, DISPLAY_BATTERY_TIMER);
 }
 
-function update_speed(){
-    $(".drone_ui").each(function(){
-        var div = $(this);
-        $.ajax({
-            url: 'get_speed',
-            type: 'post',
-            data: {"drone_id":div.attr("drone_id")},
-            success:function(data){
-                div.children(".speed").text(data);
-            }
-        });
+function set_battery_gauge(drone_id){
+    var battery_pct = parseInt($("#"+drone_id+"_battery_pct").text().slice(0,-1));
+    var gauge_div = $("#"+drone_id+"_battery_gauge");
+
+    if(battery_pct > 75){
+        gauge_div.css("background-image", "url(/static/battery_100.png)");
+    } 
+    else if(battery_pct > 50){
+        gauge_div.css("background-image", "url(/static/battery_75.png)");
+    } 
+    else if(battery_pct > 25){
+        gauge_div.css("background-image", "url(/static/battery_50.png)");
+    } 
+    else if(battery_pct > 15){
+        gauge_div.css("background-image", "url(/static/battery_25.png)");
+    }
+    else {
+        gauge_div.css("background-image", "url(/static/battery_15.png)");
+    }
+}
+
+
+function refresh_speed(drone_id){
+    $.ajax({
+        url: 'get_battery_pct',
+        type: 'post',
+        data: {"drone_id":drone_id},
+        success:function(data){
+            $("#"+drone_id+"_speed").text(data);
+        }
     });
     setTimeout(function(){
-            update_speed();
-          }, DISPLAY_SPEED_TIMER);
-
+        refresh_speed(drone_id);
+    }, DISPLAY_BATTERY_TIMER);
 }
 
-function update_global_count(){
+
+function refresh_global_count(){
     var count = 0;
     $(".count").each(function(){
         var div = $(this);
         if(div.is(":visible")){
             count = count + Number(div.text());
-            console.log(count);
         }
     });
     $("#global_count").text(count);
     setTimeout(function(){
-        update_global_count();
+        refresh_global_count();
     }, DISPLAY_COUNT_TIMER);
 }
 
-function update_count(){
-    $(".count").each(function(){
-        var div = $(this);
-        if(div.is(":visible")){
-            $.ajax({
-                url: 'get_count',
-                type: 'post',
-                data: {"drone_id":div.parent().attr("drone_id")},
-                success:function(data){
-                    div.text(data);
-                }
-            });
+function refresh_count(drone_id){
+    $.ajax({
+        url: 'get_count',
+        type: 'post',
+        data: {"drone_id":drone_id},
+        success:function(data){
+            $("#"+drone_id+"_count").text(data);
         }
     });
     setTimeout(function(){
-            update_count();
+            refresh_count(drone_id);
           }, DISPLAY_COUNT_TIMER);
 
 }
@@ -281,27 +276,6 @@ function update_log_data(){
           }, 100);
 }
 
-
-
-function set_battery(element){
-    var battery_pct = parseInt(element.text().slice(0,-1));
-    
-    if(battery_pct > 75){
-        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_100.png)");
-    } 
-    else if(battery_pct > 50){
-        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_75.png)");
-    } 
-    else if(battery_pct > 25){
-        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_50.png)");
-    } 
-    else if(battery_pct > 15){
-        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_25.png)");
-    }
-    else {
-        element.parent().children(".battery_gauge").css("background-image", "url(/static/battery_15.png)");
-    }
-}
 
 $("#video_stream_selector").change(function(){
     $.ajax({
@@ -380,3 +354,29 @@ function draw_chart(display_div_id,data_div_id){
         }]
     });
 }
+
+
+
+
+$( document ).ready(function() {
+    // Position drones images on the home_base zone
+    var hb = $("#home_base");
+    var hb_top = hb.position().top / hb.parent().height() * 100;
+    var hb_left = hb.position().left / hb.parent().width() * 100;;
+    var hb_height = hb.height() / hb.parent().height() * 100;
+    var hb_width = hb.width() / hb.parent().width() * 100;
+    console.log(hb_top + " : " + hb_left + " : " + hb_height  + " : " +  hb_width )
+    $(".drone").each(function(){
+        $(this).css({top: hb_top + "%",
+                     left: hb_left  + "%",
+                     position: 'absolute'});
+        });
+
+    // Hide drones UIs
+    $(".drone_ui").each(function(){if($(this).attr("id") != "drone_1_ui"){$(this).hide();}});
+    $(".drone").each(function(){$(this).hide();});
+    
+    // Set global count and chart
+    refresh_global_count();
+    draw_chart("global_count_graph","global_count");
+});

@@ -9,7 +9,6 @@ import time
 import argparse
 import traceback
 from random import randint
-from werkzeug.utils import secure_filename
 from shutil import copyfile
 from copy import deepcopy
 
@@ -56,7 +55,6 @@ RECORDING_STREAM = settings.RECORDING_STREAM
 
 
 DISPLAY_STREAM_NAME = "raw" # "raw" for original images, "faces" for face detection
-VIDEO_SLEEP_TIME = 0.0 # in second, used as speed control for re playing existing video
 
 
 RECORD_VIDEO = False
@@ -68,46 +66,6 @@ connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=fals
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
-
-
-# UPLOAD_FOLDER = 'static'
-# ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
-
-  
-# if args.reset:
-#   # Reset positions stream
-#   os.system('maprcli stream delete -path ' + POSITIONS_STREAM)
-#   print("positions stream deleted")
-
-#   # Reset video stream
-#   os.system('maprcli stream delete -path ' + VIDEO_STREAM)
-#   print("video stream deleted")
-
-#   # Init drone position
-#   print("Positions table deleted")
-#   os.system('maprcli table delete -path ' + POSITIONS_TABLE)
-  
-
-
-
-# # Configure positions stream
-# if not os.path.islink(POSITIONS_STREAM):
-#     logging.debug("creating stream {}".format(POSITIONS_STREAM))
-#     os.system('maprcli stream create -path ' + POSITIONS_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-#     logging.debug("stream created")
-
-
-# # Configure video stream
-# if not os.path.islink(VIDEO_STREAM):
-#     logging.debug("creating stream {}".format(VIDEO_STREAM))
-#     os.system('maprcli stream create -path ' + VIDEO_STREAM + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-#     logging.debug("stream created")
-
-
-# def create_stream(stream_path):
-#   if not os.path.islink(stream_path):
-#     os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
-
 
 # Positions stream. Each drone has its own topic
 logging.debug("creating producer for {}".format(POSITIONS_STREAM))
@@ -152,9 +110,6 @@ def stream_video(drone_id):
             except Exception as ex:
               print("can't open file {}".format(image))
               print(ex)
-  
-            if VIDEO_SLEEP_TIME :
-              time.sleep(VIDEO_SLEEP_TIME)
 
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             print('  Bad message')
@@ -164,7 +119,7 @@ def stream_video(drone_id):
 
 
 app = Flask(__name__)
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 
 ###################################
@@ -289,7 +244,7 @@ def get_count():
     try:
         count = 0
         for dronedata in dronedata_table.find():
-            print("did : {} - dronedata : {}".format(drone_id,dronedata))
+            # print("did : {} - dronedata : {}".format(drone_id,dronedata))
             count += int(dronedata["count"])
         return str(count)
     except Exception:
@@ -299,7 +254,7 @@ def get_count():
   else:
     try:
       dronedata = dronedata_table.find_by_id(drone_id)
-      print("did : {} - dronedata : {}".format(drone_id,dronedata))
+      # print("did : {} - dronedata : {}".format(drone_id,dronedata))
       count = dronedata["count"]
     except Exception as ex:
       print(ex)
@@ -397,40 +352,7 @@ def set_zone_position():
   return json.dumps(zone_doc)
 
 
-@app.route('/recorder')
-def recorder():
-  return render_template("recorder.html")
 
-
-@app.route('/delete_recording',methods=["POST"])
-def delete_recording():
-    global RECORD_VIDEO
-    RECORD_NAME = request.form["zone_name"]
-    RECORD_VIDEO = False
-    print("Deleting {} recordings")
-    try:
-        os.system("rm -rf {}".format(RECORDING_FOLDER + RECORD_NAME))
-        os.system("maprcli stream delete topic -path " + RECORDING_STREAM + " -topic " + RECORD_NAME)
-    except: 
-        traceback.print_exc()
-    return "ok"
-
-@app.route('/start_recording',methods=["POST"])
-def start_recording():
-    global RECORD_VIDEO
-    global RECORD_NAME
-    RECORD_NAME = request.form["zone_name"]
-    os.system("mkdir -p {}".format(RECORDING_FOLDER + RECORD_NAME))
-    RECORD_VIDEO = True
-    return "ok"
-
-@app.route('/stop_recording',methods=["POST"])
-def stop_recording():
-    global RECORD_VIDEO
-    global RECORD_NAME
-    RECORD_VIDEO = False
-    RECORD_NAME = None
-    return "ok"
 
 
 app.run(debug=True,host='0.0.0.0',port=80)

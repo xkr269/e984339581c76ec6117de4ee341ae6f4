@@ -50,7 +50,6 @@ ZONES_TABLE = settings.ZONES_TABLE
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
-positions_table = connection.get_or_create_store(POSITIONS_TABLE)
 
 dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":{"battery":"75","fly_speed":"5"},"log_data":"unset","count":"0","connection_status":"connected"})
 

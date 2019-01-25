@@ -1,4 +1,4 @@
-
+// Javascript file for managing TEITS recorder
 
 var current_timer = 0;
 var timer

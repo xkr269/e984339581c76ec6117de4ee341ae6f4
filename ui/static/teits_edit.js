@@ -1,3 +1,6 @@
+// Javascript file for managing TEITS editor
+
+
 $('#main_map.drop').droppable({
     drop : function(e,ui){
         var zone_id = ui.draggable.attr('id');

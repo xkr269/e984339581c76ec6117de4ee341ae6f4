@@ -12,7 +12,12 @@
   <div id="main">
     <div class="row">
       <div class="col-2 text-center">
-        Zone_name : <input id="zone_name">
+        Zone : 
+        <select class="form-control" id="zone_selector">
+          {% for zone in zones %}
+            <option value={{zone}}>{{zone._id}}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-2 text-center">
         <button class="btn" id="recorder_btn">START</button>
@@ -29,7 +34,7 @@
       </div>
     </div>
     <div class="row">
-      <img src="video_stream/drone_1" class="recording_video">
+      <img src="video_stream" class="recording_video">
     </div>
   </div>
 </body>

@@ -38,19 +38,6 @@ from shutil import copyfile
 import settings
 
 
-DRONE_ID = sys.argv[1]
-FPS =10.0
-SOURCE_FPS = 30.0
-PROJECT_FOLDER = settings.PROJECT_FOLDER
-DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
-
-# Wait ratios
-FORWARD_COEF = 3 # Time taken to move 1m
-ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
-
-SIMUL_MODE = True # when True, the drone doesn't actually fly.
-
-
 def get_cluster_name():
   with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
@@ -65,7 +52,30 @@ def check_stream(stream_path):
   if not os.path.islink(stream_path):
     print("stream {} is missing. Exiting.".format(stream_path))
     sys.exit()
+
+
+DRONE_ID = sys.argv[1]
+STREAM_FPS = settings.STREAM_FPS
+REPLAYER_FPS = settings.REPLAYER_FPS
+RECORDER_FPS = settings.RECORDER_FPS
+PROJECT_FOLDER = settings.PROJECT_FOLDER
+DIRECTIONAL_MODE = settings.DIRECTIONAL_MODE
+
+
+# Wait ratios
+FORWARD_COEF = settings.FORWARD_COEF # Time taken to move 1m
+ANGULAR_COEF = settings.ANGULAR_COEF # Time taken to rotate 360 deg
+
+EMULATE_DRONES = settings.EMULATE_DRONES # Emulator mode. Replay recorded streams.
+SIMUL_MODE = settings.SIMUL_MODE# Wait ratios
+FORWARD_COEF = 3 # Time taken to move 1m
+ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
+
     
+EMULATE_DRONES = settings.EMULATE_DRONES # Emulator mode. Replay recorded streams.
+SIMUL_MODE = settings.SIMUL_MODE # when True, the drone doesn't actually fly. # when True, the drone doesn't actually fly.
+
+ 
 CLUSTER_NAME = get_cluster_name()
 CLUSTER_IP = get_cluster_ip()
 
@@ -100,7 +110,7 @@ check_stream(POSITIONS_STREAM)
 
 # Function for transfering the video frames to FS and Stream
 def get_drone_video(drone):
-    global FPS
+    global STREAM_FPS
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
@@ -121,8 +131,7 @@ def get_drone_video(drone):
                     break
                 received_frames += 1
                 current_time = time.time()
-                if current_time > (last_frame_time + float(1/FPS)):
-                    # print(frame)
+                if current_time > (last_frame_time + float(1/STREAM_FPS)):
                     frame.to_image().save(IMAGE_FOLDER + "frame-{}.jpg".format(frame.index))
                     video_producer.produce(DRONE_ID+"_raw", json.dumps({"drone_id":DRONE_ID,
                                                                         "index":frame.index,
@@ -144,7 +153,8 @@ def get_drone_video(drone):
 
 
 def stream_recording():
-    global FPS
+    global STREAM_FPS
+    global REPLAYER_FPS
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
@@ -155,37 +165,45 @@ def stream_recording():
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
     consumer_group = str(time.time())
     video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
+    
     current_sec = 0
     last_frame_time = 0
 
     stream_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+    video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+
 
     try:
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+        print("subscribed to {} video stream".format(stream_zone))
         while True:
             current_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
             if current_zone != stream_zone:
                 stream_zone = current_zone
                 consumer_group = str(time.time())
+                video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+                print("subscribed to {} video stream".format(stream_zone))
 
             msg = video_consumer.poll(timeout=1)
 
 
             if msg is None :
+                print("timeout")
                 consumer_group = str(time.time())
+                video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
                 continue
 
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
-                print(json_msg)
+                # print("emulator for {} . producing {}".format(DRONE_ID,json_msg["image"]))
                 received_frames += 1
                 current_time = time.time()
-                if current_time > (last_frame_time + float(1/FPS)):
+
+                if current_time > (last_frame_time + float(1/STREAM_FPS)):
                     frame_index = json_msg["index"]
                     source_image = json_msg["image"]
                     new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame_index)
@@ -197,8 +215,11 @@ def stream_recording():
                     last_frame_time = time.time()
 
             elif msg.error().code() == KafkaError._PARTITION_EOF:
+                print("end of partition")
                 consumer_group = str(time.time())
+                video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
+                print("subscribed to {} video stream".format(stream_zone))
                 continue
 
             # Print stats every second
@@ -208,7 +229,8 @@ def stream_recording():
                 received_frames = 0
                 sent_frames = 0
                 current_sec = int(elapsed_time)
-            time.sleep(1/SOURCE_FPS)
+
+            time.sleep(1/REPLAYER_FPS)
 
     # Catch exceptions
     except Exception:
@@ -292,7 +314,7 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         if abs(offset) > 0:
             print("###############      turning {} degrees".format(angle))
-            if not (settings.EMULATE_DRONES or SIMUL_MODE):
+            if not (EMULATE_DRONES or SIMUL_MODE):
                 drone.turn(offset)
             print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
             time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
@@ -356,7 +378,7 @@ def main():
 
     set_homebase() # reset drone position in the positions table
 
-    if not settings.EMULATE_DRONES:
+    if not EMULATE_DRONES:
         drone = tellopy.Tello() 
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
         drone.connect()
@@ -365,7 +387,7 @@ def main():
     dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
 
     # create video thread
-    if settings.EMULATE_DRONES:
+    if EMULATE_DRONES:
         videoThread = threading.Thread(target=stream_recording)
     else:
         videoThread = threading.Thread(target=get_drone_video,args=[drone])
@@ -384,7 +406,7 @@ def main():
             if msg is None:
                 # Check that Drone is still connected
                 # if not, restarts.
-                if not settings.EMULATE_DRONES:
+                if not EMULATE_DRONES:
                     if drone.state != drone.STATE_CONNECTED:
                         dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "disconnected"}})
 
@@ -413,14 +435,14 @@ def main():
                 
                 if json_msg["action"] == "takeoff":
                     print("...  Takeoff")
-                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
+                    if not (EMULATE_DRONES or SIMUL_MODE):
                         drone.takeoff()
                         time.sleep(5)
 
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"flying","offset":current_angle}}})
 
                 if drop_zone != from_zone:
-                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
+                    if not (EMULATE_DRONES or SIMUL_MODE):
                         move_to_zone(drone,from_zone,drop_zone)
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":drop_zone, "status":"flying","offset":current_angle}}})
 
@@ -428,7 +450,7 @@ def main():
                     
                 if json_msg["action"] == "land":
                     print("...    Land")
-                    if not (settings.EMULATE_DRONES or SIMUL_MODE):
+                    if not (EMULATE_DRONES or SIMUL_MODE):
                         drone.land()
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"landed","offset":current_angle}}})
 
@@ -441,12 +463,13 @@ def main():
             break   
 
         except Exception as ex:
-            print("@@@@@@@@@@@@@@@       EXCEPTION      @@@@@@@@@@@@@@@")
+            print("...       EXCEPTION      ... ")
             traceback.print_exc()
+        time.sleep(1)
 
     print("QUITTING")
 
-    if not settings.EMULATE_DRONES:
+    if not EMULATE_DRONES:
         drone.quit()
 
 

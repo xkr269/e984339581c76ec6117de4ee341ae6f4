@@ -38,11 +38,23 @@ PROCESSORS_TABLE = DATA_FOLDER + 'processors_table'  # Table for storing info ab
 PROCESSORS_STREAM = DATA_FOLDER + 'processors_stream'   # Stream to feed the processors
 VIDEO_STREAM = DATA_FOLDER + 'video_stream' # Stream for the video frames metadata 
 RECORDING_STREAM = DATA_FOLDER + 'recording_stream' # Stream for the video frames recording metadata 
+RECORDING_TABLE = DATA_FOLDER + 'recording_table' # Table to excahnge informations while recording
 
 # Generic Settings
 ALLOWED_LAG = 2 # Allowed lag between real time events and processed events
 OFFSET_RESET_MODE = 'latest' # latest for running the demo, earliest can be used for replaying existing streams
 NUMBER_OF_PROCESSORS = 5 # Each processor can analyse 2 to 3 images / second
-EMULATE_DRONES = True    # If emulation is enbled, drone will replay recorded stream in each zone.
+EMULATE_DRONES = False    # If emulation is enbled, drone will replay recorded stream in each zone.
+
+STREAM_FPS = 10.0 # FPS sent to the datastore
+REPLAYER_FPS = 30.0 # FPS replayed from recording
+RECORDER_FPS = 30.0 # FPR recorded from drone
+
+DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
 
 
+# Drone wait ratios
+FORWARD_COEF = 3 # Time taken to move 1m
+ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
+
+SIMUL_MODE = True # when True, the drones don't actually fly.
