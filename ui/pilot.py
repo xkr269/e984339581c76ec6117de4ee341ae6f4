@@ -59,21 +59,17 @@ STREAM_FPS = settings.STREAM_FPS
 REPLAYER_FPS = settings.REPLAYER_FPS
 RECORDER_FPS = settings.RECORDER_FPS
 PROJECT_FOLDER = settings.PROJECT_FOLDER
-DIRECTIONAL_MODE = settings.DIRECTIONAL_MODE
+
+
 
 
 # Wait ratios
 FORWARD_COEF = settings.FORWARD_COEF # Time taken to move 1m
 ANGULAR_COEF = settings.ANGULAR_COEF # Time taken to rotate 360 deg
 
-DRONE_MODE = settings.DRONE_MODE # Emulator mode. Replay recorded streams.
-NO_FLIGHT = settings.NO_FLIGHT# Wait ratios
-FORWARD_COEF = 3 # Time taken to move 1m
-ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg
-
-    
-DRONE_MODE = settings.DRONE_MODE # Emulator mode. Replay recorded streams.
-NO_FLIGHT = settings.NO_FLIGHT # when True, the drone doesn't actually fly. # when True, the drone doesn't actually fly.
+DRONE_MODE = settings.DRONE_MODE
+NO_FLIGHT = settings.NO_FLIGHT 
+DIRECTIONAL_MODE = settings.DIRECTIONAL_MODE
 
  
 CLUSTER_NAME = get_cluster_name()
@@ -293,7 +289,7 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
 
             except KeyboardInterrupt:
                 break
-                
+
             except Exception:
                 traceback.print_exc()
                 continue

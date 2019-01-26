@@ -45,17 +45,17 @@ ALLOWED_LAG = 2 # Allowed lag between real time events and processed events
 OFFSET_RESET_MODE = 'latest' # latest for running the demo, earliest can be used for replaying existing streams
 
 
-ACTIVE_DRONES = 1 # Number of pilot launched
+ACTIVE_DRONES = 2 # Number of pilot launched
 NUMBER_OF_PROCESSORS = 2 # Each processor can analyse 2 to 3 images / second
 DRONE_MODE = "live"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
-NO_FLIGHT = True  # when True, the flight commands aren't sent to the drones.
+NO_FLIGHT = False  # when True, the flight commands aren't sent to the drones.
 
 
 STREAM_FPS = 20.0 # FPS sent to the datastore
 REPLAYER_FPS = 24.0 # FPS replayed from recording
 RECORDER_FPS = 24.0 # FPR recorded from drone
 
-DIRECTIONAL_MODE = "FORWARD" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
+DIRECTIONAL_MODE = "OPTIMIZED" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
 
 
 # Drone wait ratios
