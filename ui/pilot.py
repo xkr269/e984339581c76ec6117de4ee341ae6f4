@@ -38,6 +38,12 @@ from shutil import copyfile
 import settings
 
 
+#### Kill previous instances
+os.system("kill -9 $(ps aux | grep 'pilot.py' | awk '{print $2}')")
+
+
+
+
 def get_cluster_name():
   with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
     first_line = f.readline()
@@ -84,6 +90,17 @@ DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
 RECORDING_FOLDER = settings.RECORDING_FOLDER
+
+
+
+### Kill previous processes
+
+os.sykill -9 `pidof python`
+kill -9 `pidof python3`
+
+
+
+
 
 current_angle = 0.0
 
