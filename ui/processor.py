@@ -5,7 +5,7 @@
 Face Detection Processor
 
 Reads images from the main video stream
-Detects faces on the image
+Detects stuff on the image , depending on the processor function
 Writes processed images to the main video steam
 
 
@@ -17,6 +17,8 @@ import numpy
 import time
 import traceback
 import json
+import imutils
+from imutils.object_detection import non_max_suppression
 
 from PIL import Image
 from random import randint
@@ -63,7 +65,35 @@ producer = Producer({'streams.producer.default.stream': OUTPUT_STREAM})
 cascPath = "haarcascade_frontalface_default.xml"
 faceCascade = cv2.CascadeClassifier(cascPath)
 
-def processing_function(message):
+hog = cv2.HOGDescriptor()
+hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+def people_detection(image):
+    
+    # detect people in the image
+    (rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
+        padding=(8, 8), scale=1.05)
+ 
+    # # draw the original bounding boxes
+    # for (x, y, w, h) in rects:
+    #     cv2.rectangle(orig, (x, y), (x + w, y + h), (0, 0, 255), 2)
+ 
+    # apply non-maxima suppression to the bounding boxes using a
+    # fairly large overlap threshold to try to maintain overlapping
+    # boxes that are still people
+    rects = numpy.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
+    pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
+ 
+    # draw the final bounding boxes
+    for (xA, yA, xB, yB) in pick:
+        cv2.rectangle(image, (xA, yA), (xB, yB), (0, 255, 0), 2)
+
+    return (image,len(pick))
+
+
+
+def face_detection(image):
+
     global faceCascade
 
     # print("processing {}".format(message["image"]))
@@ -77,19 +107,32 @@ def processing_function(message):
         minSize=(30, 30)
     )
 
-    message["faces"] = len(faces)
-
     # Draw faces on the image
     for (x, y, w, h) in faces:
         cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-    # Write new image to file system
-    image_folder = ROOT_PATH + "/" + message["drone_id"] + "/images/faces/"
+    return (image,len(faces))
+
+
+
+
+def processing_function(message):
+
+    image_array = numpy.array(Image.open(message["image"]))
+    image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+    image = imutils.resize(image, width=min(400, image.shape[1]))
+    (processed_image,count) = people_detection(image) 
+
+    message["count"] = count
+
+
+    image_folder = ROOT_PATH + "/" + message["drone_id"] + "/images/processed/"
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
-    new_image_path = image_folder + "frame-{}.jpg".format(message["index"])
-    cv2.imwrite(new_image_path, image)
-    message["image"] = new_image_path
+    processed_image_path = image_folder + "frame-{}.jpg".format(message["index"])
+    cv2.imwrite(processed_image_path, processed_image)
+    message["image"] = processed_image_path
+
     return message
 
 
@@ -116,7 +159,7 @@ while True:
             processed_message = processing_function(received_msg)
 
             # Update drone document with faces count 
-            dronedata_table.update(_id=processed_message["drone_id"],mutation={'$put': {'count': processed_message["faces"]}})
+            dronedata_table.update(_id=processed_message["drone_id"],mutation={'$put': {'count': processed_message["count"]}})
 
 
             # Write processed message to the output stream
@@ -132,7 +175,7 @@ while True:
             print("Message {} - offset {} processed".format(received_msg["index"],offset))
             if not display_wait:
                 print("Wait time : {}".format(time.time() - check_time))
-            topic = processed_message["drone_id"] + "_faces"
+            topic = processed_message["drone_id"] + "_processed"
             producer.produce(topic,json.dumps(processed_message))
 
             # Commit offset

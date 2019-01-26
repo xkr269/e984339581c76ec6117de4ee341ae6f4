@@ -54,11 +54,7 @@ ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
 
 
-DISPLAY_STREAM_NAME = "raw" # "raw" for original images, "faces" for face detection
-
-
-RECORD_VIDEO = False
-RECORD_NAME = None
+DISPLAY_STREAM_NAME = "source" # "source" for original images, "processed" for processed image
 
 
 # Create database connection
@@ -76,8 +72,6 @@ def stream_video(drone_id):
     global VIDEO_STREAM
     global OFFSET_RESET_MODE
     global DISPLAY_STREAM_NAME
-    global RECORD_VIDEO
-    global RECORD_NAME
 
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
@@ -95,13 +89,6 @@ def stream_video(drone_id):
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
-            if RECORD_VIDEO:
-                print("recording frame {} for {}".format(json_msg["index"],RECORD_NAME))
-                new_image = RECORDING_FOLDER + RECORD_NAME + "/frame-{}".format(json_msg["index"])
-                copyfile(image,new_image)
-                record_message = deepcopy(json_msg)
-                record_message["image"] = new_image
-                recording_producer.produce(RECORD_NAME, json.dumps(record_message))
             try:
               with open(image, "rb") as imageFile:
                 f = imageFile.read()

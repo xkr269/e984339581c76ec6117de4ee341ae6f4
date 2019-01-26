@@ -48,7 +48,7 @@ def main():
     # Subscribe to source stream on given topics
     consumer_group = str(time.time())
     main_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
-    main_consumer.subscribe([SOURCE_STREAM + ":drone_1_raw",SOURCE_STREAM + ":drone_2_raw",SOURCE_STREAM + ":drone_3_raw",]) 
+    main_consumer.subscribe([SOURCE_STREAM + ":drone_1_source",SOURCE_STREAM + ":drone_2_source",SOURCE_STREAM + ":drone_3_source",]) 
     producer = Producer({'streams.producer.default.stream': PROCESSORS_STREAM})
 
     # Initialize offset
