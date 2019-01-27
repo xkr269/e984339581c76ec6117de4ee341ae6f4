@@ -32,7 +32,7 @@ print("Recording stream created")
 
 
 print("initializing drones")
-ZONES_TABLE = settings.ZONES_TABLE
+DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 CLUSTER_IP = settings.CLUSTER_IP
 
 # Create database connection
