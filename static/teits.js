@@ -234,7 +234,7 @@ function set_battery_gauge(drone_id){
 
 function refresh_speed(drone_id){
     $.ajax({
-        url: 'get_battery_pct',
+        url: 'get_speed',
         type: 'post',
         data: {"drone_id":drone_id},
         success:function(data){

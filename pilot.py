@@ -527,7 +527,7 @@ def main():
                         move_to_zone(drone,from_zone,drop_zone)
                     if not settings.DRONE_MODE == "live":
                         flight_data_doc = {"battery":str(randint(50,100)),
-                       "fly_speed":str(randint(0,10))}
+                                           "fly_speed":str(randint(0,10))}
                         mutation = {"$put": {'flight_data': flight_data_doc}}
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
                     
