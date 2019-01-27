@@ -452,8 +452,10 @@ def main():
     fly_drone = DRONE_MODE=="live" and not NO_FLIGHT
 
     set_homebase() # reset drone position in the positions table
+
+    drone_number = int(DRONE_ID.split('_')[1])
     
-    drone = tellopy.Tello() 
+    drone = tellopy.Tello(port=9000+drone_number) 
 
     if DRONE_MODE == "live":
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
