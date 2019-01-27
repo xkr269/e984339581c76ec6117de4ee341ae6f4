@@ -5,7 +5,7 @@ var DISPLAY_COUNT_TIMER = 1000
 var DISPLAY_SPEED_TIMER = 1000
 var DISPLAY_CONNECTION_STATUS_TIMER = 1000
 var DISPLAY_BATTERY_TIMER = 5000
-var PATROL_TIMER = 5000
+var PATROL_TIMER = 3000
 var GRAPH_TIMER = 2000 
 var graph_color = "#6CFC5F"
 
@@ -74,7 +74,7 @@ $("#back_home_button").click(function(){
     $(".drone").each(function(){
         console.log("Stop patrolling");
         patrol_in_progess = false;
-        if($(this).css('display')!='none'){move_to_position($(this).attr("id"),"home_base","land");}
+        if($(this).is(":visible")){move_to_position($(this).attr("id"),"home_base","land");}
     })
 })
 
@@ -180,7 +180,7 @@ function patrol(){
     console.log("Patroling");
     $(".drone").each(function(){
         var drone_id = $(this).attr("id")
-        if(patrol_in_progess && $(this).css('display')!='none'){
+        if(patrol_in_progess && $(this).is(":visible")){
             move_to_next_waypoint(drone_id);
         }
     })
