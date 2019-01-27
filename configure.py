@@ -42,6 +42,7 @@ print("Recording stream created")
 print("initializing drones")
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 CLUSTER_IP = settings.CLUSTER_IP
+CLUSTER_NAME = settings.CLUSTER_NAME
 
 # Create database connection
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
@@ -57,8 +58,7 @@ for DRONE_ID in ["drone_1","drone_2","drone_3"]:
 
 
 
-with fileinput.FileInput("configure.py", inplace=True) as file:
-    for line in file:
-        print(line.replace("{{clustername}}", settings.CLUSTER_NAME), end='')
+pirnt("updating init file")
+os.system("sed -i 's/{{clustername}}/{}/g'".format(CLUSTER_NAME))
 
-print("Configuration complete, run the aplication using start.py")
+print("Configuration complete, initialize environment variables with source init.sh then run the aplication using start.py")
