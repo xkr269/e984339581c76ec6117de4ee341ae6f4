@@ -50,7 +50,7 @@ processes = []
 processes.append(launch_script("teits_ui.py"))
 print("User interface started ... ")
 
-if settings.DRONE_MODE == "replay":
+if settings.DRONE_MODE != "live":
     for i in range(settings.ACTIVE_DRONES):
         processes.append(launch_script("pilot.py",arg="drone_"+str(i+1)))
         print("Drone {} simulator started ... ".format(i+1))
