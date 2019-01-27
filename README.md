@@ -20,6 +20,10 @@ Configure settings :
 Launch project :
 python configure.py on the main cluster (maprcli should be available)
 
-then 
 python start.py for main program
-in live mode, pilot.py has to run on the computer connected to the drone 
+
+Access the zone editor : {{cluster_ip}}/edit
+create the zones for the drones
+
+
+In live mode, pilot.py has to run on the computer connected to the drone 

@@ -18,6 +18,17 @@ import time
 import subprocess
 
 
+#### Kill previous instances
+current_pid = os.getpid()
+print(current_pid)
+all_pids = os.popen("ps aux | grep 'start.py' | awk '{print $2}'").read().split('\n')[:-1]
+for pid in all_pids:
+    if int(pid) != current_pid:
+        print("killing {}".format(pid))
+        os.system("kill -9 {}".format(pid))
+
+
+
 def launch_script(script_name,arg=None):
     if arg:
         return subprocess.Popen(["python", settings.ROOT_PATH + script_name,arg])

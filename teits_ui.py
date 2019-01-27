@@ -19,6 +19,16 @@ from confluent_kafka import Producer, Consumer, KafkaError
 import settings
 
 
+#### Kill previous instances
+current_pid = os.getpid()
+print(current_pid)
+all_pids = os.popen("ps aux | grep 'teits_ui.py' | awk '{print $2}'").read().split('\n')[:-1]
+for pid in all_pids:
+    if int(pid) != current_pid:
+        print("killing {}".format(pid))
+        os.system("kill -9 {}".format(pid))
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--reset', dest='reset', default=False, help='Reset stream and drone positions')
