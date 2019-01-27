@@ -142,11 +142,14 @@ def set_drone_position():
 
   try:
     current_position = dronedata_table.find_by_id(drone_id)["position"]
+    print("current position = {}".format(current_position))
     from_zone = current_position["zone"]
     current_status = current_position["status"]
   except:
+    traceback.print_exc()
     from_zone = "home_base"
     current_status = "landed"
+
 
   if from_zone != drop_zone and current_status == "landed":
     # If move is required but drone is not flying, then takeoff before moving
