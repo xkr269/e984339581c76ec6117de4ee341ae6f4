@@ -59,6 +59,6 @@ for DRONE_ID in ["drone_1","drone_2","drone_3"]:
 
 
 print("updating init file")
-os.system("sed -i 's/{{clustername}}/{}/g'".format(CLUSTER_NAME))
+os.system("sed -i 's/{{clustername}}/{}/g' init.sh".format(CLUSTER_NAME))
 
 print("Configuration complete, initialize environment variables with source init.sh then run the aplication using start.py")
