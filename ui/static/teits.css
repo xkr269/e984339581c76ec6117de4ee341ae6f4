@@ -16,7 +16,7 @@
 
 .edit-border-visible {
   border-color: #6CFC5F;
-  border-width: 1px;
+  border-width: 0px;
   border-style: solid;
 }
 
@@ -109,8 +109,6 @@ body {
 }
 
 
-#control_panel {
-}
 
 #command_buttons div {
   text-align: center;
@@ -289,4 +287,14 @@ select.form-control:not([size]):not([multiple]){
   font-size: 20px;
   text-align: center;
   color: red;
+}
+
+
+#archi {
+  position: absolute;
+  width: 110%;
+  left: -20%;
+  top: 50%;
+  background-image: url(archi.png);
+  display: none;
 }

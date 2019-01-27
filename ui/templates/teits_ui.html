@@ -13,6 +13,7 @@
       <div class="col-2">
         <div class="sidenav">
           <a href="#" id="new_drone_button">New Drone</a>
+          <a href="#" id="architecture_button">Architecture</a>
           <button class="dropdown-btn dropdown-toggle" >Actions</button>
           <div class="dropdown-container">
             <a href="#" id="patrol_button">Patrol</a>
@@ -60,6 +61,9 @@
             <img class="drone_video" id="drone_{{n}}_video">
         </div>
         {% endfor %}
+        <div class="row">
+          <img class="archi" id="archi" src="{{url_for('static', filename='archi.png')}}">
+        </div>  
       </div> 
   </div>
 </body>
