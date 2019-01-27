@@ -103,7 +103,12 @@ connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=fals
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
-dronedata_table.insert_or_replace({"_id":DRONE_ID,"flight_data":"unset","log_data":"unset","count":0,"connection_status":"disconnected"})
+dronedata_table.insert_or_replace({"_id":DRONE_ID,
+                                   "flight_data":{"battery":50,"fly_speed":5.0},
+                                   "log_data":"unset",
+                                   "count":0,
+                                   "connection_status":"disconnected",
+                                   "position": {"zone":"home_base", "status":"landed","offset":0.0}})
 
 # test if folders exist and create them if needed
 if not os.path.exists(IMAGE_FOLDER):
@@ -520,6 +525,12 @@ def main():
                 if drop_zone != from_zone:
                     if fly_drone:
                         move_to_zone(drone,from_zone,drop_zone)
+                    if not settings.DRONE_MODE == "live":
+                        flight_data_doc = {"battery":str(randint(50,100)),
+                       "fly_speed":str(randint(0,10))}
+                        mutation = {"$put": {'flight_data': flight_data_doc}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                    
                     dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
                     print("...  Moved")
 
