@@ -13,6 +13,13 @@ if not os.path.exists(settings.DATA_FOLDER):
 print("Data directory created")
 
 
+# Create folders
+if not os.path.exists(settings.RECORDING_FOLDER):
+    os.makedirs(settings.RECORDING_FOLDER)
+
+print("Recording directory created")
+
+
 # Create streams
 
 print("Creating streams ...")

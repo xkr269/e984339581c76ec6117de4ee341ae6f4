@@ -137,7 +137,7 @@ def processing_function(message):
 
 
 # Sets processor as available
-print("Set {} as available".format(PROCESSOR_ID))
+# print("Set {} as available".format(PROCESSOR_ID))
 processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
 
@@ -182,7 +182,7 @@ while True:
             processors_table.insert_or_replace({"_id":"offset","offset":offset})
             
             # Set processor as available
-            print("Set {} as available".format(PROCESSOR_ID))
+            # print("Set {} as available".format(PROCESSOR_ID))
             processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
 

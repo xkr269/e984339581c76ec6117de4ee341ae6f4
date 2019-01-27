@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="{{url_for('static', filename='bootstrap.min.css')}}">
   <link rel="stylesheet" href="{{url_for('static', filename='teits.css')}}">
 </head>
-<body> 
+<body>
+  <span id="active_drones" number={{active_drones}}></span>
   <div id="main" class="row h-100">
       <div class="col-2">
         <div class="sidenav">
@@ -30,15 +31,17 @@
       </div>
       <div class="col-5" >
         <div class="row" id="main_map">
+          
           {% for zone in zones %}
             <div class="border-visible drop zone"
                  id="{{zone._id}}" 
                  style="position: absolute; height:{{zone.height}}%;width: {{zone.width}}%; top:{{zone.top}}%;left:{{zone.left}}%">
             </div>
           {% endfor %}
-          <div class=" drag drone" id="drone_1" ></div>     
-          <div class=" drag drone" id="drone_2" ></div>
-          <div class=" drag drone" id="drone_3" ></div>
+
+          {% for drone in drones %}
+            <div class=" drag drone" id="{{drone}}"></div>
+          {% endfor %}
 
         </div>
         <div class="row" drone_id="global">
@@ -48,18 +51,18 @@
       </div>
       <div class="col-1"></div>
       <div class="col-4" id="control_panel">
-        {% for n in range(1,4) %}
-        <div class="row drone_ui" id="drone_{{n}}_ui" drone_id="drone_{{n}}">
-            <div class="drone_info"></div>
-            <div class="count" id="drone_{{n}}_count"></div>
-            <div class="battery_pct" id="drone_{{n}}_battery"></div>
-            <div class="battery_gauge" id="drone_{{n}}_battery_gauge"></div>
-            <div class="speed" id="drone_{{n}}_speed"></div>
-            <div class="speed_gauge" id="drone_{{n}}_speed_gauge"></div>
-            <div class="count_graph" id="drone_{{n}}_count_graph"></div>
-            <div class="connection_status blink" id="drone_{{n}}_connection_status"></div>
-            <div class="connection_status_video blink"></div>
-            <img class="drone_video" id="drone_{{n}}_video">
+        {% for drone in drones %}
+        <div class="row drone_ui" id="{{drone}}_ui" drone_id="{{drone}}">
+            <div class="drone_info" id="{{drone}}_info"></div>
+            <div class="count" id="{{drone}}_count"></div>
+            <div class="battery_pct" id="{{drone}}_battery"></div>
+            <div class="battery_gauge" id="{{drone}}_battery_gauge"></div>
+            <div class="speed" id="{{drone}}_speed"></div>
+            <div class="speed_gauge" id="{{drone}}_speed_gauge"></div>
+            <div class="count_graph" id="{{drone}}_count_graph"></div>
+            <div class="connection_status blink" id="{{drone}}_connection_status"></div>
+            <div class="connection_status_video blink" id="{{drone}}_connection_status"></div>
+            <img class="drone_video" id="{{drone}}_video">
         </div>
         {% endfor %}
         <div class="row">

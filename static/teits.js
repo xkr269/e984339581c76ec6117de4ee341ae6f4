@@ -120,7 +120,7 @@ $("#new_drone_button").click(function(){
             refresh_battery_pct("drone_1");
             refresh_speed("drone_1");
             refresh_count("drone_1");
-
+            if($("#active_drones").attr("number")=="1"){$("#new_drone_button").hide();}
         }
         else if (!$("#drone_2_ui").is(":visible")){
             $("#archi").hide();
@@ -132,6 +132,7 @@ $("#new_drone_button").click(function(){
             refresh_battery_pct("drone_2");
             refresh_speed("drone_2");
             refresh_count("drone_2");
+            if($("#active_drones").attr("number")=="2"){$("#new_drone_button").hide();}
         }
         else {
             $("#drone_3").show();
@@ -142,6 +143,7 @@ $("#new_drone_button").click(function(){
             refresh_battery_pct("drone_3");
             refresh_speed("drone_3");
             refresh_count("drone_3");
+            if($("#active_drones").attr("number")=="3"){$("#new_drone_button").hide();}
         }
 })
 

@@ -123,7 +123,12 @@ app = Flask(__name__)
 # Main UI
 @app.route('/')
 def home():
-  return render_template("teits_ui.html",zones=zones_table.find(),display=DISPLAY_STREAM_NAME)
+  zones = zones_table.find()
+  display = DISPLAY_STREAM_NAME
+  drones = []
+  for i in range(settings.ACTIVE_DRONES):
+    drones.append("drone_{}".format(i+1))
+  return render_template("teits_ui.html",active_drones=settings.ACTIVE_DRONES,zones=zones,display=display,drones=drones)
 
 
 
@@ -363,7 +368,11 @@ def get_zone_coordinates():
 @app.route('/delete_zone',methods=['POST'])
 def delete_zone():
   name = request.form['zone_name']
-  zones_table.delete(_id=name)
+  try:
+    zones_table.delete(_id=name)
+  except:
+    traceback.print_exc()
+    return "Can't delete {}".format(name)
   return "{} Deleted".format(name)
 
 

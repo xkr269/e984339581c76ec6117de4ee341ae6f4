@@ -252,7 +252,7 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
-    print("producing into {}".format(VIDEO_STREAM))
+    # print("producing into {}".format(VIDEO_STREAM))
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
     current_sec = 0
     last_frame_time = 0
@@ -274,7 +274,7 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
                     if current_time > (last_frame_time + float(1/STREAM_FPS)):
                         new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
                         frame.to_image().save(new_image)
-                        print("producing {}".format(new_image))
+                        # print("producing {}".format(new_image))
                         video_producer.produce(DRONE_ID+"_source", json.dumps({"drone_id":DRONE_ID,
                                                                             "index":frame.index,
                                                                             "image":new_image}))

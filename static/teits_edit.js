@@ -3,17 +3,19 @@
 
 $('#main_map.drop').droppable({
     drop : function(e,ui){
+        console.log("main map drop");
         var zone_id = ui.draggable.attr('id');
         var top = ui.draggable.offset().top / ui.draggable.parent().height() * 100;
         var left = ui.draggable.offset().left / ui.draggable.parent().width() * 100;
         console.log(top);
         console.log(left);
         set_zone_position(zone_id,top,left); 
-        save_zone();
     },
 }); 
 
 function save_zone(){
+    if ($("#zone_name").val()!=""){
+    console.log("Saving zone : " + $("#zone_name").val())
     $.ajax({
             url: 'save_zone',
             type: 'post',
@@ -29,6 +31,7 @@ function save_zone(){
                 location.reload();
             }
         });
+    }
 }
 
 $("#zone_save").click(function(){
@@ -68,6 +71,7 @@ $(".zone.drag").click(function(){
 
 
 function update_zone_coordinates(zone_id){
+    console.log("get coord");
     $.ajax({
             url: 'get_zone_coordinates',
             type: 'post',
@@ -82,12 +86,14 @@ function update_zone_coordinates(zone_id){
 }
 
 function set_zone_position(zone_id,top,left){
+    console.log("set position");
     $.ajax({
             url: 'set_zone_position',
             type: 'post',
             data: {"zone_id":zone_id,"top":top,"left":left},
             success:function(data){
-                console.log(data)
+                console.log("position: ");
+                console.log(data);
             }
         });
 }
