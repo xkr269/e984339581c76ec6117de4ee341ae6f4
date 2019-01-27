@@ -65,7 +65,7 @@ class Tello(object):
     LOG_DEBUG = logger.LOG_DEBUG
     LOG_ALL = logger.LOG_ALL
 
-    def __init__(self, port=9000):
+    def __init__(self, port=9000,simulate=False):
         self.tello_addr = ('192.168.10.1', 8889)
         self.debug = False
         self.pkt_seq_num = 0x01e4
@@ -92,6 +92,7 @@ class Tello(object):
         self.log_data = LogData(log)
         self.log_data_file = None
         self.log_data_header_recorded = False
+        self.simulate = simulate
 
         # video zoom state
         self.zoom = False
@@ -104,9 +105,10 @@ class Tello(object):
         self.sock.bind(('', self.port))
         self.sock.settimeout(2.0)
 
-        dispatcher.connect(self.__state_machine, dispatcher.signal.All)
-        threading.Thread(target=self.__recv_thread).start()
-        threading.Thread(target=self.__video_thread).start()
+        if not self.simulate:
+            dispatcher.connect(self.__state_machine, dispatcher.signal.All)
+            threading.Thread(target=self.__recv_thread).start()
+            threading.Thread(target=self.__video_thread).start()
 
     def set_loglevel(self, level):
         """

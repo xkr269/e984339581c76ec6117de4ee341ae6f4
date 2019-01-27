@@ -455,7 +455,10 @@ def main():
 
     drone_number = int(DRONE_ID.split('_')[1])
     
-    drone = tellopy.Tello(port=9000+drone_number) 
+    if settings.DRONE_MODE  == "live":
+        drone = tellopy.Tello()
+    else:
+        drone = tellopy.Tello(port=9000+drone_number,simulate=True) 
 
     if DRONE_MODE == "live":
         drone.subscribe(drone.EVENT_FLIGHT_DATA, handler)
