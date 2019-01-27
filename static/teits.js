@@ -201,7 +201,7 @@ function refresh_battery_pct(drone_id){
         type: 'post',
         data: {"drone_id":drone_id},
         success:function(data){
-            $("#"+drone_id+"_battery_pct").text(data+"%");
+            $("#"+drone_id+"_battery").text(data+"%");
             set_battery_gauge(drone_id);
         }
     });
@@ -211,7 +211,7 @@ function refresh_battery_pct(drone_id){
 }
 
 function set_battery_gauge(drone_id){
-    var battery_pct = parseInt($("#"+drone_id+"_battery_pct").text().slice(0,-1));
+    var battery_pct = parseInt($("#"+drone_id+"_battery").text().slice(0,-1));
     var gauge_div = $("#"+drone_id+"_battery_gauge");
 
     if(battery_pct > 75){
