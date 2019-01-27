@@ -518,20 +518,20 @@ def main():
                 from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
                 drop_zone = json_msg["drop_zone"]
                 
-                if json_msg["action"] == "takeoff":
-                    print("...  Takeoff")
-                    if fly_drone:
-                        drone.takeoff()
-                        time.sleep(5)
-
-                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"flying","offset":current_angle}}})
-
                 if drop_zone != from_zone:
                     if fly_drone:
                         move_to_zone(drone,from_zone,drop_zone)
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":drop_zone, "status":"flying","offset":current_angle}}})
-
                     print("...  Moved")
+
+
+                if json_msg["action"] == "takeoff":
+                    print("...  Takeoff")
+                    if fly_drone:
+                        drone.takeoff()
+                        time.sleep(3)
+                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"flying","offset":current_angle}}})
+
                     
                 if json_msg["action"] == "land":
                     print("...    Land")
@@ -539,7 +539,6 @@ def main():
                         drone.land()
                         print("landed")
                     dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"landed","offset":current_angle}}})
-
                     time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:

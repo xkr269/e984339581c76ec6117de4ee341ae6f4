@@ -18,6 +18,7 @@ $(function(){
 });
 
 
+
 function set_drone_position(drone_id,drop_zone,action){
     console.log("Set " + drone_id + " position to " + drop_zone + " , action : " + action)
     $.ajax({
@@ -296,24 +297,6 @@ function update_connection_status(){
             update_connection_status();
           }, DISPLAY_CONNECTION_STATUS_TIMER);
 
-}
-
-
-function update_log_data(){
-    $(".drone_info").each(function(){
-        $.ajax({
-            url: 'get_log_data',
-            type: 'post',
-            data: {"drone_id":$(this).attr("drone_id")},
-            success:function(data){
-                $(this).children(".log_data").text(data);
-            }
-        });
-    });
-
-    setTimeout(function(){
-            update_log_data();
-          }, 100);
 }
 
 
