@@ -54,7 +54,7 @@ ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
 
 
-DISPLAY_STREAM_NAME = "source" # "source" for original images, "processed" for processed image
+DISPLAY_STREAM_NAME = settings.DISPLAY_STREAM_NAME # "source" for original images, "processed" for processed image
 
 
 # Create database connection

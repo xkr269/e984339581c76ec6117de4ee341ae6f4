@@ -43,12 +43,13 @@ RECORDING_TABLE = DATA_FOLDER + 'recording_table' # Table to excahnge informatio
 # Generic Settings
 ALLOWED_LAG = 2 # Allowed lag between real time events and processed events
 OFFSET_RESET_MODE = 'latest' # latest for running the demo, earliest can be used for replaying existing streams
+DISPLAY_STREAM_NAME = "processed" # source or processed
 
 
 ACTIVE_DRONES = 2 # Number of pilot launched
 NUMBER_OF_PROCESSORS = 2 # Each processor can analyse 2 to 3 images / second
 DRONE_MODE = "live"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
-NO_FLIGHT = False  # when True, the flight commands aren't sent to the drones.
+NO_FLIGHT = True  # when True, the flight commands aren't sent to the drones.
 
 
 STREAM_FPS = 20.0 # FPS sent to the datastore

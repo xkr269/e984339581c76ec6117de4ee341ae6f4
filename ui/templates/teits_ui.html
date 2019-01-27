@@ -10,27 +10,20 @@
 </head>
 <body> 
   <div id="main" class="row h-100">
-      <div class="col-1 offset-1">
-        <div class="row">
-          <button id="new_drone_button">New Drone</button>
-        </div>
-        <div class="row">
-          <button id="patrol_button">Patrol</button>
-        </div>
-        <div class="row">
-          <button id="back_home_button">Back Home</button>
-        </div>
-        <div class="row">
-          <button id="land_button">Land drones</button>
-        </div>
-        <div class="row">
-          <button id="reset_button">Reset positions</button>
-        </div>
-        <div class="row">
-          <select class="form-control" id="video_stream_selector">
+      <div class="col-2 offset-1">
+        <div class="sidenav">
+          <a href="#" id="new_drone_button">New Drone</a>
+          <button class="dropdown-btn dropdown-toggle" >Actions</button>
+          <div class="dropdown-container">
+            <a href="#" id="patrol_button">Patrol</a>
+            <a href="#" id="back_home_button">Back Home</a>
+            <a href="#" id="land_button">Land</a>
+            <a href="#" id="reset_button">Reset</a>
+          </div>
+<!--           <select class="form-control" id="video_stream_selector">
            <option value=source>Source</option>
            <option value=processed>Processed</option>
-          </select>
+          </select> -->
         </div>
       </div>
       <div class="col-5" >
@@ -41,9 +34,9 @@
                  style="position: absolute; height:{{zone.height}}%;width: {{zone.width}}%; top:{{zone.top}}%;left:{{zone.left}}%">
             </div>
           {% endfor %}
-          <div class="border-visible drag drone" id="drone_1" ></div>     
-          <div class="border-visible drag drone" id="drone_2" ></div>
-          <div class="border-visible drag drone" id="drone_3" ></div>
+          <div class=" drag drone" id="drone_1" ></div>     
+          <div class=" drag drone" id="drone_2" ></div>
+          <div class=" drag drone" id="drone_3" ></div>
 
         </div>
         <div class="row" drone_id="global">
