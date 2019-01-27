@@ -39,14 +39,14 @@ import settings
 
 DRONE_ID = sys.argv[1]
 
-#### Kill previous instances
-current_pid = os.getpid()
-print(current_pid)
-all_pids = os.popen("ps aux | grep 'pilot.py {}' | awk '{print $2}'".format(DRONE_ID)).read().split('\n')[:-1]
-for pid in all_pids:
-    if int(pid) != current_pid:
-        print("killing {}".format(pid))
-        os.system("kill -9 {}".format(pid))
+# ### Kill previous instances
+# current_pid = os.getpid()
+# print(current_pid)
+# all_pids = os.popen("ps aux | grep 'pilot.py {}' | awk '{print $2}'".format(DRONE_ID)).read().split('\n')[:-1]
+# for pid in all_pids:
+#     if int(pid) != current_pid:
+#         print("killing {}".format(pid))
+#         os.system("kill -9 {}".format(pid))
 
 
 
