@@ -18,3 +18,5 @@ pip install imutils
 pip install opencv-python
 pip install Pillow
 
+conda install av -c conda-forge -y
+

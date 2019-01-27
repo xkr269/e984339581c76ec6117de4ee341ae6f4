@@ -37,11 +37,12 @@ from shutil import copyfile
 
 import settings
 
+DRONE_ID = sys.argv[1]
 
 #### Kill previous instances
 current_pid = os.getpid()
 print(current_pid)
-all_pids = os.popen("ps aux | grep 'pilot.py' | awk '{print $2}'").read().split('\n')[:-1]
+all_pids = os.popen("ps aux | grep 'pilot.py {}' | awk '{print $2}'".format(DRONE_ID)).read().split('\n')[:-1]
 for pid in all_pids:
     if int(pid) != current_pid:
         print("killing {}".format(pid))
@@ -65,7 +66,6 @@ def check_stream(stream_path):
     sys.exit()
 
 
-DRONE_ID = sys.argv[1]
 STREAM_FPS = settings.STREAM_FPS
 REPLAYER_FPS = settings.REPLAYER_FPS
 RECORDER_FPS = settings.RECORDER_FPS
