@@ -402,7 +402,7 @@ def move_to_zone(drone,start_zone,drop_zone):
 
 
 def set_homebase():
-    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":"home_base", "status":"landed","offset":current_angle}}})
+    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":"home_base", "status":"landed","offset":current_angle}}})
 
 
 
@@ -423,7 +423,7 @@ def handler(event, sender, data, **args):
                                "gyro_x":data.imu.gyro_x,
                                "gyro_y":data.imu.gyro_y,
                                "gyro_z":data.imu.gyro_z}}
-        mutation = {'$put': {'log_data': log_data_doc}}
+        mutation = {"$put": {'log_data': log_data_doc}}
         # dronedata_table.update(_id=DRONE_ID,mutation=mutation)
         # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
 
@@ -433,7 +433,7 @@ def handler(event, sender, data, **args):
         flight_data_doc = {"battery":str(data.battery_percentage),
                            "fly_speed":str(data.fly_speed),
                            "wifi_strength":str(data.wifi_strength)}
-        mutation = {'$put': {'flight_data': flight_data_doc}}
+        mutation = {"$put": {'flight_data': flight_data_doc}}
         try:
             dronedata_table.update(_id=DRONE_ID,mutation=mutation)
         except Exception as ex:
@@ -515,7 +515,7 @@ def main():
                 if drop_zone != from_zone:
                     if fly_drone:
                         move_to_zone(drone,from_zone,drop_zone)
-                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":drop_zone, "status":"flying","offset":current_angle}}})
+                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
                     print("...  Moved")
 
 
@@ -524,7 +524,7 @@ def main():
                     if fly_drone:
                         drone.takeoff()
                         time.sleep(3)
-                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"flying","offset":current_angle}}})
+                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
 
                     
                 if json_msg["action"] == "land":
@@ -532,7 +532,7 @@ def main():
                     if fly_drone:
                         drone.land()
                         print("landed")
-                    dronedata_table.update(_id=DRONE_ID,mutation={'$put': {'position': {"zone":from_zone, "status":"landed","offset":current_angle}}})
+                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"landed","offset":current_angle}}})
                     time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:

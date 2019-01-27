@@ -292,7 +292,7 @@ def land():
 @app.route('/reset_position',methods=["POST"])
 def reset_position():
     drone_id = request.form["drone_id"]
-    dronedata_table.update(_id=drone_id,mutation={'$put': {'position.zone': "home_base"}})
+    dronedata_table.update(_id=drone_id,mutation={"$put": {'position.zone': "home_base"}})
     message = {"drone_id":drone_id,"drop_zone":"home_base","action":"land"}
     positions_producer.produce(drone_id, json.dumps(message))
     return "Landing order sent for {}".format(drone_id)
