@@ -1,3 +1,4 @@
+import fileinput
 import os
 import settings
 import time
@@ -53,5 +54,11 @@ for DRONE_ID in ["drone_1","drone_2","drone_3"]:
                                        "count":0,
                                        "connection_status":"disconnected",
                                        "position": {"zone":"home_base", "status":"landed","offset":0.0}})
+
+
+
+with fileinput.FileInput(filename, inplace=True) as file:
+    for line in file:
+        print(line.replace("{{clustername}}", settings.CLUSTER_NAME), end='')
 
 print("Configuration complete, run the aplication using start.py")
