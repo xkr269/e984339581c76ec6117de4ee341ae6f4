@@ -125,7 +125,7 @@ def processing_function(message):
     message["count"] = count
 
 
-    image_folder = DATA_FOLDER + "/" + message["drone_id"] + "/images/processed/"
+    image_folder = DATA_FOLDER + message["drone_id"] + "/images/processed/"
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
     processed_image_path = image_folder + "frame-{}.jpg".format(message["index"])
