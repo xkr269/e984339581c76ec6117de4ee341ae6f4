@@ -153,7 +153,12 @@ $("#patrol_button").click(function(){
 })
 
 $("#architecture_button").click(function(){
-    $("#archi").show();
+    var archi_div = $("#archi");
+    if(archi_div.is(":visible")){
+        archi_div.hide();
+    }else{
+        archi_div.show();
+    }
 })
 
 function move_to_next_waypoint(drone_id){
@@ -311,6 +316,33 @@ $("#video_stream_selector").change(function(){
     });
 })
 
+$("#source_display").click(function(){
+    $.ajax({
+        url: 'set_video_stream',
+        type: 'post',
+        data: {"stream":"source"},
+        success:function(data){
+            console.log("video stream changed to source");
+            $("#processed_tick").hide();
+            $("#source_tick").show();
+        }
+    });
+})
+
+$("#processed_display").click(function(){
+    $.ajax({
+        url: 'set_video_stream',
+        type: 'post',
+        data: {"stream":"procesed"},
+        success:function(data){
+            console.log("video stream changed to processed");
+            $("#source_tick").hide();
+            $("#processed_tick").show();
+        }
+    });
+})
+
+
 
 function draw_chart(display_div_id,data_div_id){
     Highcharts.chart(display_div_id, {
@@ -402,6 +434,11 @@ $( document ).ready(function() {
     // Set global count and chart
     refresh_global_count();
     draw_chart("global_count_graph","global_count");
+    if($("#source_selector").attr("display")=="source"){
+        $("#source_tick").show();
+    }else{
+        $("#processed_tick").show();
+    }
 });
 
 

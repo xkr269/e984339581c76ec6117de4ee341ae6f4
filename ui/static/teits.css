@@ -10,13 +10,13 @@
 
 .border-visible {
   border-color: #6CFC5F;
-  border-width: 1px;
+  border-width: 0px;
   border-style: solid;
 }
 
 .edit-border-visible {
   border-color: #6CFC5F;
-  border-width: 0px;
+  border-width: 1px;
   border-style: solid;
 }
 
@@ -297,4 +297,9 @@ select.form-control:not([size]):not([multiple]){
   top: 50%;
   background-image: url(archi.png);
   display: none;
+}
+
+#source_selector img {
+  display: none;
+  vertical-align: baseline;
 }

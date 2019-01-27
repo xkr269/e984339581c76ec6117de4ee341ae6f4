@@ -66,22 +66,22 @@ processes = []
 #     processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/pilot.py",arg="drone_"+str(i)))
 #     print("Drone {} pilot started ... ".format(i))
 
-processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/teits_ui.py"))
+processes.append(launch_script("teits_ui.py"))
 print("User interface started ... ")
 
 if settings.DRONE_MODE == "replay":
     for i in range(settings.ACTIVE_DRONES):
-        processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/pilot.py",arg="drone_"+str(i+1)))
+        processes.append(launch_script("pilot.py",arg="drone_"+str(i+1)))
         print("Drone {} simulator started ... ".format(i+1))
         time.sleep(1)
 
 
-processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/dispatcher.py"))
+processes.append(launch_script("dispatcher.py"))
 print("Dispatcher started ... ")
 
 
 for i in range(settings.NUMBER_OF_PROCESSORS):
-    processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/processor.py"))
+    processes.append(launch_script("processor.py"))
     print("Processor {} started ... ".format(i+1))
 
 

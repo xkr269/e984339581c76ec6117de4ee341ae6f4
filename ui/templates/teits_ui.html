@@ -21,10 +21,11 @@
             <a href="#" id="land_button">Land</a>
             <a href="#" id="reset_button">Reset</a>
           </div>
-<!--           <select class="form-control" id="video_stream_selector">
-           <option value=source>Source</option>
-           <option value=processed>Processed</option>
-          </select> -->
+          <button class="dropdown-btn dropdown-toggle" >Display</button>
+          <div class="dropdown-container" id="source_selector" display="{{display}}">
+            <a href="#" id="source_display">Source  <img id="source_tick" src="{{url_for('static', filename='tick.png')}}"></a>
+            <a href="#" id="processed_display">Processed  <img id="processed_tick" src="{{url_for('static', filename='tick.png')}}"></a>
+          </div>
         </div>
       </div>
       <div class="col-5" >

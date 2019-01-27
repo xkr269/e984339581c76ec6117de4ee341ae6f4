@@ -39,8 +39,13 @@ import settings
 
 
 #### Kill previous instances
-os.system("kill -9 $(ps aux | grep 'pilot.py' | awk '{print $2}')")
-
+current_pid = os.getpid()
+print(current_pid)
+all_pids = os.popen("ps aux | grep 'pilot.py' | awk '{print $2}'").read().split('\n')[:-1]
+for pid in all_pids:
+    if int(pid) != current_pid:
+        print("killing {}".format(pid))
+        os.system("kill -9 {}".format(pid))
 
 
 
@@ -90,17 +95,6 @@ DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
 RECORDING_FOLDER = settings.RECORDING_FOLDER
-
-
-
-### Kill previous processes
-
-os.sykill -9 `pidof python`
-kill -9 `pidof python3`
-
-
-
-
 
 current_angle = 0.0
 

@@ -1,6 +1,5 @@
 #! /usr/bin/python
 
-import logging
 import math
 import io
 import os
@@ -18,8 +17,6 @@ from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from confluent_kafka import Producer, Consumer, KafkaError
 
 import settings
-
-logging.basicConfig(filename='logs/ui.log',level=logging.DEBUG)
 
 
 
@@ -64,7 +61,6 @@ zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 
 # Positions stream. Each drone has its own topic
-logging.debug("creating producer for {}".format(POSITIONS_STREAM))
 positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
 recording_producer = Producer({'streams.producer.default.stream': RECORDING_STREAM})
 
@@ -89,6 +85,7 @@ def stream_video(drone_id):
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
+            print("playing {}".format(image))
             try:
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
@@ -116,7 +113,7 @@ app = Flask(__name__)
 # Main UI
 @app.route('/')
 def home():
-  return render_template("teits_ui.html",zones=zones_table.find())
+  return render_template("teits_ui.html",zones=zones_table.find(),display=DISPLAY_STREAM_NAME)
 
 
 
