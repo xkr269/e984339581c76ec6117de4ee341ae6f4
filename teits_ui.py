@@ -217,7 +217,7 @@ def get_battery_pct():
     battery = dronedata_table.find_by_id(drone_id)["flight_data"]["battery"]
   except:
     battery = "-"
-  return battery
+  return str(battery)
 
 
 # Returns drone current speed

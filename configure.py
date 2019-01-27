@@ -41,7 +41,7 @@ connection = ConnectionFactory().get_connection(connection_str=connection_str)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 for DRONE_ID in ["drone_1","drone_2","drone_3"]:
     dronedata_table.insert_or_replace({"_id":DRONE_ID,
-                                       "flight_data":{"battery":50,"fly_speed":5},
+                                       "flight_data":{"battery":50,"fly_speed":5.0},
                                        "log_data":"unset",
                                        "count":0,
                                        "connection_status":"disconnected",
