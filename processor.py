@@ -35,8 +35,7 @@ PROCESSOR_ID = "processor_" + str(int(time.time())) + str(randint(0,10000)) # Ge
 
 CLUSTER_NAME = settings.CLUSTER_NAME
 CLUSTER_IP = settings.CLUSTER_IP
-PROJECT_FOLDER = "/teits"
-ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
+DATA_FOLDER = settings.DATA_FOLDER
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE # Path for the table that stores drone data
 PROCESSORS_TABLE = settings.PROCESSORS_TABLE # Path for the table that stores processor info
 PROCESSORS_STREAM = settings.PROCESSORS_STREAM # Output Stream path
@@ -126,7 +125,7 @@ def processing_function(message):
     message["count"] = count
 
 
-    image_folder = ROOT_PATH + "/" + message["drone_id"] + "/images/processed/"
+    image_folder = DATA_FOLDER + "/" + message["drone_id"] + "/images/processed/"
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
     processed_image_path = image_folder + "frame-{}.jpg".format(message["index"])
