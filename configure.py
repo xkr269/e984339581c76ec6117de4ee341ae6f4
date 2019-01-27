@@ -57,7 +57,7 @@ for DRONE_ID in ["drone_1","drone_2","drone_3"]:
 
 
 
-with fileinput.FileInput(filename, inplace=True) as file:
+with fileinput.FileInput("configure.py", inplace=True) as file:
     for line in file:
         print(line.replace("{{clustername}}", settings.CLUSTER_NAME), end='')
 
