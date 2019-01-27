@@ -153,6 +153,7 @@ def set_drone_position():
     action = "takeoff"
     message = {"drone_id":drone_id,"drop_zone":from_zone,"action":action}
     positions_producer.produce(drone_id, json.dumps(message))
+    print("New instruction : {}".format(message))
 
 
   message = {"drone_id":drone_id,"drop_zone":drop_zone,"action":action}
