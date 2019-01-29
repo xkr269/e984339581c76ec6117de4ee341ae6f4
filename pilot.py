@@ -34,19 +34,18 @@ from confluent_kafka import Producer, Consumer, KafkaError
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from math import atan2, sqrt, pi, floor
 from shutil import copyfile
+import base64
 
 import settings
 
 DRONE_ID = sys.argv[1]
 
-# ### Kill previous instances
-# current_pid = os.getpid()
-# print(current_pid)
-# all_pids = os.popen("ps aux | grep 'pilot.py {}' | awk '{print $2}'".format(DRONE_ID)).read().split('\n')[:-1]
-# for pid in all_pids:
-#     if int(pid) != current_pid:
-#         print("killing {}".format(pid))
-#         os.system("kill -9 {}".format(pid))
+# Remote mode sends data through a remote MaprDB buffer instead of writing directly to the FS
+REMOTE_MODE = False
+if len(sys.argv)>2:
+    if sys.argv[2] == "remote":
+        REMOTE_MODE = True
+
 
 
 
@@ -96,6 +95,8 @@ ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
 RECORDING_FOLDER = settings.RECORDING_FOLDER
 
+BUFFER_TABLE = DATA_FOLDER + "{}_buffer".format(DRONE_ID)
+
 current_angle = 0.0
 
 # Create database connection
@@ -109,6 +110,8 @@ dronedata_table.insert_or_replace({"_id":DRONE_ID,
                                    "count":0,
                                    "connection_status":"disconnected",
                                    "position": {"zone":"home_base", "status":"landed","offset":0.0}})
+
+buffer_table = connection.get_or_create_store(BUFFER_TABLE)
 
 # test if folders exist and create them if needed
 if not os.path.exists(IMAGE_FOLDER):
@@ -127,8 +130,16 @@ def get_drone_video(drone):
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
+
     print("producing into {}".format(VIDEO_STREAM))
+
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
+
+    try:
+        i = int(buffer_table.find_by_id("last_id")["last_id"]) + 1
+    except:
+        i = 0
+
     current_sec = 0
     last_frame_time = 0
     container = av.open(drone.get_video_stream())
@@ -140,13 +151,18 @@ def get_drone_video(drone):
             print("Drone is connected - decoding container")
             for frame in container.decode(video=0):
                 if drone.state != drone.STATE_CONNECTED:
-                    print("Drone disconnected - QUITTING VIDEO THREAD ##############")
+                    print("Drone disconnected - QUITTING VIDEO THREAD")
                     break
                 received_frames += 1
                 current_time = time.time()
                 if current_time > (last_frame_time + float(1/STREAM_FPS)):
                     new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
-                    frame.to_image().save(new_image)
+                    if REMOTE_MODE:
+                        buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(frame.to_image())})
+                        buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
+                        i += 1
+                    else:
+                        frame.to_image().save(new_image)
                     video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
                                                                         "index":frame.index,
                                                                         "image":new_image}))

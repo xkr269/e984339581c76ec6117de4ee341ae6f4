@@ -34,21 +34,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--reset', dest='reset', default=False, help='Reset stream and drone positions')
 args = parser.parse_args()
 
-
-def get_cluster_name():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[0]
-
-
-def get_cluster_ip():
-  with open('/opt/mapr/conf/mapr-clusters.conf', 'r') as f:
-    first_line = f.readline()
-    return first_line.split(' ')[2].split(':')[0]
-
-
-CLUSTER_NAME = get_cluster_name()
-CLUSTER_IP = get_cluster_ip()
+CLUSTER_NAME = settings.CLUSTER_NAME
+CLUSTER_IP = settings.CLUSTER_IP
 
 PROJECT_FOLDER = settings.PROJECT_FOLDER
 ROOT_PATH = CLUSTER_NAME + settings.PROJECT_FOLDER
