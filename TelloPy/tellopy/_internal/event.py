@@ -1,5 +1,5 @@
 class Event:
-    def __init__(self, name='annoymous'):
+    def __init__(self, name='annonymous'):
         self.name = name
 
     def __repr__(self):

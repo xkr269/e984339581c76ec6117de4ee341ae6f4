@@ -11,6 +11,7 @@ by processors to release processed messages in the right order
 """
 
 import time
+import os
 import json
 import traceback
 from confluent_kafka import Producer, Consumer
@@ -70,6 +71,9 @@ def main():
                 continue
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
+                # Wait for file to exist on the file system before sending it
+                while not os.path.isfile(json_msg["image"]):
+                    time.sleep(0.05)
                 received_messages += 1
                 # get the first available processor
                 processed = False

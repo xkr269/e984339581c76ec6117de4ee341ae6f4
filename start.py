@@ -5,9 +5,7 @@
 
 The Eye In The Sky
 
-Real time face detection from automated drones video streams
-
-Use the settings.yaml file to define the project path and the number of processor processes.
+Real time people detection from remote controlled drones video streams
 
 
 """
@@ -16,6 +14,7 @@ import os
 import settings
 import time
 import subprocess
+import sys
 
 
 #### Kill previous instances
@@ -26,6 +25,7 @@ for pid in all_pids:
     if int(pid) != current_pid:
         print("killing {}".format(pid))
         os.system("kill -9 {}".format(pid))
+
 
 
 
@@ -42,14 +42,18 @@ def terminate_process(process):
 processes = []
 
 
-# Used in simulation mode
-# for i in [1]:
-#     processes.append(launch_script("e984339581c76ec6117de4ee341ae6f4/ui/pilot.py",arg="drone_"+str(i)))
-#     print("Drone {} pilot started ... ".format(i))
-
 processes.append(launch_script("teits_ui.py"))
 print("User interface started ... ")
 
+# Receivers
+if settings.REMOTE_MODE:
+    for i in range(settings.ACTIVE_DRONES):
+        processes.append(launch_script("receiver.py",arg="drone_"+str(i+1)))
+        print("Receiver for drone_{} started ... ".format(i+1))
+        time.sleep(1)
+
+
+# Pilots
 if settings.DRONE_MODE != "live":
     for i in range(settings.ACTIVE_DRONES):
         processes.append(launch_script("pilot.py",arg="drone_"+str(i+1)))

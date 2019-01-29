@@ -35,6 +35,7 @@ from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 from math import atan2, sqrt, pi, floor
 from shutil import copyfile
 import base64
+from io import BytesIO
 
 import settings
 
@@ -46,7 +47,7 @@ if len(sys.argv)>2:
     if sys.argv[2] == "remote":
         REMOTE_MODE = True
 
-
+print("Remote mode : {}".format(REMOTE_MODE))
 
 
 def get_cluster_name():
@@ -130,6 +131,7 @@ def get_drone_video(drone):
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
+    global REMOTE_MODE
 
     print("producing into {}".format(VIDEO_STREAM))
 
@@ -149,33 +151,46 @@ def get_drone_video(drone):
         sent_frames = 0
         while drone.state != drone.STATE_QUIT:
             print("Drone is connected - decoding container")
-            for frame in container.decode(video=0):
-                if drone.state != drone.STATE_CONNECTED:
-                    print("Drone disconnected - QUITTING VIDEO THREAD")
-                    break
-                received_frames += 1
-                current_time = time.time()
-                if current_time > (last_frame_time + float(1/STREAM_FPS)):
-                    new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
-                    if REMOTE_MODE:
-                        buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(frame.to_image())})
-                        buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
-                        i += 1
-                    else:
-                        frame.to_image().save(new_image)
-                    video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
-                                                                        "index":frame.index,
-                                                                        "image":new_image}))
-                    sent_frames += 1
-                    last_frame_time = time.time()
+            try:
+                for frame in container.decode(video=0):
+                    if drone.state != drone.STATE_CONNECTED:
+                        print("Drone disconnected - QUITTING VIDEO THREAD")
+                        break
+                    received_frames += 1
+                    current_time = time.time()
+                    if current_time > (last_frame_time + float(1/STREAM_FPS)):
+                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
+                        print("producing {}".format(new_image))
+                        try:
+                            if REMOTE_MODE:
+                                buffered = BytesIO()
+                                frame.to_image().save(buffered,format="JPEG")
+                                buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(buffered.getvalue())})
+                                buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
+                                print("{} sent to buffer".format(new_image))
+                                i += 1
+                            else:
+                                frame.to_image().save(new_image)
+                        except Exception as ex:
+                            print(ex)
+                            traceback.print_exc()
 
-                # Print stats every second
-                elapsed_time = time.time() - start_time
-                if int(elapsed_time) != current_sec:
-                    print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
-                    received_frames = 0
-                    sent_frames = 0
-                    current_sec = int(elapsed_time)
+                        video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
+                                                                            "index":frame.index,
+                                                                            "image":new_image}))
+                        sent_frames += 1
+                        last_frame_time = time.time()
+
+                    # Print stats every second
+                    elapsed_time = time.time() - start_time
+                    if int(elapsed_time) != current_sec:
+                        print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                        received_frames = 0
+                        sent_frames = 0
+                        current_sec = int(elapsed_time)
+            except:
+                traceback.print_exc()
+                container = av.open(drone.get_video_stream())
 
     # Catch exceptions
     except Exception:

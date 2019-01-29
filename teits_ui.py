@@ -75,7 +75,7 @@ def stream_video(drone_id):
         if DISPLAY_STREAM_NAME != current_stream:
           consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
           current_stream = DISPLAY_STREAM_NAME
-          print("stream changed")
+          print("stream changed #############################")
         msg = consumer.poll(timeout=1)
         if msg is None:
             continue
@@ -84,6 +84,8 @@ def stream_video(drone_id):
             image = json_msg['image']
             print("playing {}".format(image))
             try:
+              while not os.path.isfile(image):
+                    time.sleep(0.05)
               with open(image, "rb") as imageFile:
                 f = imageFile.read()
                 b = bytearray(f)

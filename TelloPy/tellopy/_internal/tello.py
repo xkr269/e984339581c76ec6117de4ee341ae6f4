@@ -31,7 +31,7 @@ class Tello(object):
     EVENT_FLIGHT_DATA = event.Event('fligt_data')
     EVENT_LOG_HEADER = event.Event('log_header')
     EVENT_LOG = EVENT_LOG_HEADER
-    EVENT_LOG_sourceDATA = event.Event('log_sourcedata')
+    EVENT_LOG_RAWDATA = event.Event('log_rawdata')
     EVENT_LOG_DATA = event.Event('log_data')
     EVENT_LOG_CONFIG = event.Event('log_config')
     EVENT_TIME = event.Event('time')
@@ -462,10 +462,10 @@ class Tello(object):
         """Send a custom command to the drone."""
         if param :
             pkt = Packet(cmd + ' ' + param)
-            log.info('Custom : {} {}'.format(cmd,param))
+            log.info('Custom command sent : {} {}'.format(cmd,param))
         else:
             pkt = Packet(cmd)
-            log.info('Custom : {}'.format(cmd,param))
+            log.info('Custom command sent   : {}'.format(cmd,param))
         pkt.fixup()
         return self.send_packet(pkt)
 
@@ -540,8 +540,21 @@ class Tello(object):
         return self.send_packet(pkt)
 
     def __process_packet(self, data):
+        # try:
+        #     print(data.decode(encoding="utf-8"))
+        # except:
+        #     print("------")
+        #     print(data)
+
+        # return True
+
         if isinstance(data, str):
             data = bytearray([x for x in data])
+
+        pkt = Packet(data)
+        cmd = uint16(data[5], data[6])
+
+        print(cmd)
 
         if str(data[0:9]) == 'conn_ack:' or data[0:9] == b'conn_ack:':
             log.info('connected. (port=%2x%2x)' % (data[9], data[10]))
@@ -560,8 +573,6 @@ class Tello(object):
             log.info('    %s' % str(map(chr, data))[1:-1])
             return False
 
-        pkt = Packet(data)
-        cmd = uint16(data[5], data[6])
         if cmd == LOG_HEADER_MSG:
             id = uint16(data[9], data[10])
             log.info("recv: log_header: id=%04x, '%s'" % (id, str(data[28:54])))
@@ -573,7 +584,7 @@ class Tello(object):
                 self.log_data_header_recorded = True
         elif cmd == LOG_DATA_MSG:
             log.debug("recv: log_data: length=%d, %s" % (len(data[9:]), byte_to_hexstring(data[9:])))
-            self.__publish(event=self.EVENT_LOG_sourceDATA, data=data[9:])
+            self.__publish(event=self.EVENT_LOG_RAWDATA, data=data[9:])
             try:
                 self.log_data.update(data[10:])
                 if self.log_data_file:
@@ -717,6 +728,7 @@ class Tello(object):
 
         if event_connected:
             self.__publish(event=self.EVENT_CONNECTED, **args)
+            self.custom_command("command")
             self.connected.set()
         if event_disconnected:
             self.__publish(event=self.EVENT_DISCONNECTED, **args)
@@ -724,12 +736,20 @@ class Tello(object):
 
     def __recv_thread(self):
         sock = self.sock
+        send_time = True
 
         while self.state != self.STATE_QUIT:
 
-            if self.state == self.STATE_CONNECTED:
-                time.sleep(0.1)
-                self.__send_stick_command()  # ignore errors
+            # if self.state == self.STATE_CONNECTED:
+            #     time.sleep(0.1)
+            #     self.__send_stick_command()  # ignore errors
+
+            # Send a command to the drone every 5 seconds to avoid landing and disconnection
+            if int(time.time()) % 5 == 0 and send_time:
+                self.custom_command("time?")
+                send_time = False
+            elif int(time.time()) % 5 == 1 and not send_time:
+                send_time = True
 
             try:
                 data, server = sock.recvfrom(self.udpsize)
