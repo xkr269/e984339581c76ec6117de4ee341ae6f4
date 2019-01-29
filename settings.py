@@ -8,9 +8,9 @@ Settings files for TEITS demo project
 """
 
 
-ACTIVE_DRONES = 3 # Number of pilot processes launched
+ACTIVE_DRONES = 1 # Number of pilot processes launched
 NUMBER_OF_PROCESSORS = 2 # Each processor can analyse 2 to 3 images / second
-DRONE_MODE = "live"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
+DRONE_MODE = "video"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
 NO_FLIGHT = True  # when True, the flight commands aren't sent to the drones.
 REMOTE_MODE = True # When True, drones pilots are supposed to be far from the main cluster. 
                    # Images are then sent using a direct connection to a DB buffer in the main cluster

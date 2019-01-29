@@ -335,7 +335,7 @@ $("#processed_display").click(function(){
     $.ajax({
         url: 'set_video_stream',
         type: 'post',
-        data: {"stream":"procesed"},
+        data: {"stream":"processed"},
         success:function(data){
             console.log("video stream changed to processed");
             $("#source_tick").hide();

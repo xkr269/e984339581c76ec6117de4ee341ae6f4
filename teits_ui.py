@@ -51,6 +51,7 @@ RECORDING_STREAM = settings.RECORDING_STREAM
 DISPLAY_STREAM_NAME = settings.DISPLAY_STREAM_NAME # "source" for original images, "processed" for processed image
 
 
+
 # Create database connection
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
@@ -61,6 +62,10 @@ dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
 recording_producer = Producer({'streams.producer.default.stream': RECORDING_STREAM})
 
+# consumers = {}
+# consumers["source"] = consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_source"])
+# consumers["processed"] = consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_processed"])
+
 def stream_video(drone_id):
     global VIDEO_STREAM
     global OFFSET_RESET_MODE
@@ -68,14 +73,18 @@ def stream_video(drone_id):
 
     print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
-    consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
+    consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})  
     consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
     current_stream = DISPLAY_STREAM_NAME
+    
     while True:
+        print(DISPLAY_STREAM_NAME)
         if DISPLAY_STREAM_NAME != current_stream:
+          consumer_group = str(time.time())
+          consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
           consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
           current_stream = DISPLAY_STREAM_NAME
-          print("stream changed #############################")
+          print("stream changed")
         msg = consumer.poll(timeout=1)
         if msg is None:
             continue

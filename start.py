@@ -7,6 +7,11 @@ The Eye In The Sky
 
 Real time people detection from remote controlled drones video streams
 
+to run the project (as root): 
+- customize settings.py as needed
+- python configure.py
+- source init.sh
+- python start.py
 
 """
 

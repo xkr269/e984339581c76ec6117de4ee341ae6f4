@@ -26,8 +26,16 @@ if len(sys.argv)>2:
         buffer_table.insert_or_replace({"_id":"last_id","last_id":"-1"})
         print("Table reset")
 
-first_id = int(buffer_table.find_by_id("first_id")["first_id"])
-last_id = int(buffer_table.find_by_id("last_id")["last_id"])
+try:
+    first_id = int(buffer_table.find_by_id("first_id")["first_id"])
+except KeyError:
+    first_id = 0
+
+try:
+    last_id = int(buffer_table.find_by_id("last_id")["last_id"])
+except KeyError:
+    last_id = first_id - 1
+
 
 print("first id : {}".format(first_id))
 print("last id : {}".format(last_id))

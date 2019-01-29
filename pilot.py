@@ -159,8 +159,8 @@ def get_drone_video(drone):
                     received_frames += 1
                     current_time = time.time()
                     if current_time > (last_frame_time + float(1/STREAM_FPS)):
-                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
-                        print("producing {}".format(new_image))
+                        index = frame.index
+                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
                         try:
                             if REMOTE_MODE:
                                 buffered = BytesIO()
@@ -176,7 +176,7 @@ def get_drone_video(drone):
                             traceback.print_exc()
 
                         video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
-                                                                            "index":frame.index,
+                                                                            "index":index,
                                                                             "image":new_image}))
                         sent_frames += 1
                         last_frame_time = time.time()
@@ -308,11 +308,24 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
                     received_frames += 1
                     current_time = time.time()
                     if current_time > (last_frame_time + float(1/STREAM_FPS)):
-                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(frame.index)
-                        frame.to_image().save(new_image)
-                        # print("producing {}".format(new_image))
+                        index = frame.index
+                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
+                        try:
+                            if REMOTE_MODE:
+                                buffered = BytesIO()
+                                frame.to_image().save(buffered,format="JPEG")
+                                buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(buffered.getvalue())})
+                                buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
+                                print("{} sent to buffer".format(new_image))
+                                i += 1
+                            else:
+                                frame.to_image().save(new_image)
+                        except Exception as ex:
+                            print(ex)
+                            traceback.print_exc()
+                        print("producing {}".format(new_image))
                         video_producer.produce(DRONE_ID+"_source", json.dumps({"drone_id":DRONE_ID,
-                                                                            "index":frame.index,
+                                                                            "index":index,
                                                                             "image":new_image}))
                         sent_frames += 1
                         last_frame_time = time.time()
