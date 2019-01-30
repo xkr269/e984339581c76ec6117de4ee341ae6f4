@@ -437,11 +437,27 @@ $( document ).ready(function() {
     var hb_height = hb.height() / hb.parent().height() * 100;
     var hb_width = hb.width() / hb.parent().width() * 100;
     console.log(hb_top + " : " + hb_left + " : " + hb_height  + " : " +  hb_width )
-    $(".drone").each(function(){
+/*    $(".drone").each(function(){
         $(this).css({top: hb_top + "%",
                      left: hb_left  + "%",
                      position: 'absolute'});
-        });
+        });*/
+
+    $("#drone_1").css({top: "30%",
+                 left: "45%",
+                 position: 'absolute'});
+
+    $("#drone_2").css({top: "50%",
+                 left: "25%",
+                 position: 'absolute'});
+
+
+    $("#drone_3").css({top: "50%",
+                 left: "65%",
+                 position: 'absolute'});
+
+
+
 
     // Hide drones UIs
     $(".drone_ui").each(function(){if($(this).attr("id") != "drone_1_ui"){$(this).hide();}});
