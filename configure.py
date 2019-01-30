@@ -31,10 +31,14 @@ def create_stream(stream_path):
   if not os.path.islink(stream_path):
     os.system('maprcli stream create -path ' + stream_path + ' -produceperm p -consumeperm p -topicperm p -copyperm p -adminperm p')
 
+
+os.system("rm -rf " + settings.POSITIONS_STREAM)
 create_stream(settings.POSITIONS_STREAM)
 print("Positions stream created")
+os.system("rm -rf " + settings.PROCESSORS_STREAM)
 create_stream(settings.PROCESSORS_STREAM)
 print("Processors stream created")
+os.system("rm -rf " + settings.VIDEO_STREAM)
 create_stream(settings.VIDEO_STREAM)
 print("Video stream created")
 create_stream(settings.RECORDING_STREAM)
@@ -42,6 +46,7 @@ print("Recording stream created")
 
 
 print("initializing drones")
+os.system("rm -rf " + settings.DRONEDATA_TABLE)
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 CLUSTER_IP = settings.CLUSTER_IP
 CLUSTER_NAME = settings.CLUSTER_NAME

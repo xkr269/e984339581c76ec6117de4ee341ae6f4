@@ -94,7 +94,7 @@ CLUSTER_IP = get_cluster_ip()
 
 ROOT_PATH = settings.ROOT_PATH
 DATA_FOLDER = settings.DATA_FOLDER
-IMAGE_FOLDER = DATA_FOLDER + "/images/" + DRONE_ID + +"/source/"
+IMAGE_FOLDER = DATA_FOLDER + "/images/" + DRONE_ID + "/source/"
 VIDEO_STREAM = settings.VIDEO_STREAM
 POSITIONS_STREAM = settings.POSITIONS_STREAM
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE

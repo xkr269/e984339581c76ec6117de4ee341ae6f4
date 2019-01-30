@@ -5,6 +5,7 @@ import sys
 import base64
 import settings
 import logging
+import os
 
 
 
@@ -14,6 +15,7 @@ logging.basicConfig(filename=settings.LOG_FOLDER + "receiver_{}.log".format(DRON
 
 DATA_FOLDER = settings.DATA_FOLDER
 BUFFER_TABLE = DATA_FOLDER + "{}_buffer".format(DRONE_ID)
+os.system("rm -rf " + BUFFER_TABLE)
 CLUSTER_IP = settings.CLUSTER_IP
 
 # Create database connection
