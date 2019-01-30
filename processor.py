@@ -18,6 +18,7 @@ import time
 import traceback
 import json
 import imutils
+import logging
 from imutils.object_detection import non_max_suppression
 
 from PIL import Image
@@ -30,8 +31,12 @@ import settings
 
 ############################       Settings        #########################
 
+
 OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
 PROCESSOR_ID = "processor_" + str(int(time.time())) + str(randint(0,10000)) # Generate processor UID
+
+logging.basicConfig(filename=settings.LOG_FOLDER + "processor_{}.log".format(PROCESSOR_ID) ,level=logging.INFO)
+
 
 CLUSTER_NAME = settings.CLUSTER_NAME
 CLUSTER_IP = settings.CLUSTER_IP
@@ -96,6 +101,8 @@ def face_detection(image):
     global faceCascade
 
     # print("processing {}".format(message["image"]))
+    while not os.path.isfile(image):
+        time.sleep(0.05)
     image_array = numpy.array(Image.open(message["image"]))
     image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -125,7 +132,7 @@ def processing_function(message):
     message["count"] = count
 
 
-    image_folder = DATA_FOLDER + message["drone_id"] + "/images/processed/"
+    image_folder = DATA_FOLDER + "/images/" + message["drone_id"] + "/processed/"
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
     processed_image_path = image_folder + "frame-{}.jpg".format(message["index"])

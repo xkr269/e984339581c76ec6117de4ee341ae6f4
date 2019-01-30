@@ -8,10 +8,10 @@ Settings files for TEITS demo project
 """
 
 
-ACTIVE_DRONES = 1 # Number of pilot processes launched
-NUMBER_OF_PROCESSORS = 2 # Each processor can analyse 2 to 3 images / second
-DRONE_MODE = "video"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
-NO_FLIGHT = True  # when True, the flight commands aren't sent to the drones.
+ACTIVE_DRONES = 2 # Number of pilot processes launched
+NUMBER_OF_PROCESSORS = 3 # Each processor can analyse 2 to 3 images / second
+DRONE_MODE = "live"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
+NO_FLIGHT = False  # when True, the flight commands aren't sent to the drones.
 REMOTE_MODE = True # When True, drones pilots are supposed to be far from the main cluster. 
                    # Images are then sent using a direct connection to a DB buffer in the main cluster
 
@@ -21,6 +21,10 @@ REPLAYER_FPS = 24.0 # FPS replayed from recording
 RECORDER_FPS = 24.0 # FPR recorded from drone
 
 
+# Drone settings
+DIRECTIONAL_MODE = "LINEAR" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward) or DIRECT (no turn, just moveto the point)
+FORWARD_COEF = 3 # Time taken to move 1m - used to wait between move instructions
+ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg - used to wait between move instructions
 
 # Utilities
 
@@ -45,6 +49,7 @@ PROJECT_FOLDER = "/teits/" # Project folder from the cluster root
 ROOT_PATH = '/mapr/' + CLUSTER_NAME + PROJECT_FOLDER
 DATA_FOLDER = ROOT_PATH + "data/" # Folder to store the data
 RECORDING_FOLDER = DATA_FOLDER + "recording/" # Folder to store the recordings
+LOG_FOLDER = ROOT_PATH + "logs/" # Folder to store the data
 
 
 # Table names
@@ -68,7 +73,4 @@ DISPLAY_STREAM_NAME = "processed" # source or processed- whichstream is displaye
 
 
 
-# Drone settings
-DIRECTIONAL_MODE = "OPTIMIZED" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward)
-FORWARD_COEF = 3 # Time taken to move 1m - used to wait between move instructions
-ANGULAR_COEF = 8.0 # Time taken to rotate 360 deg - used to wait between move instructions
+

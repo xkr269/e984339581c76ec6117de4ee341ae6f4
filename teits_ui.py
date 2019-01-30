@@ -10,6 +10,7 @@ import traceback
 from random import randint
 from shutil import copyfile
 from copy import deepcopy
+import logging
 
 
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
@@ -19,20 +20,17 @@ from confluent_kafka import Producer, Consumer, KafkaError
 import settings
 
 
+logging.basicConfig(filename=settings.LOG_FOLDER + "teits_ui.log" ,level=logging.INFO)
+
+
 #### Kill previous instances
 current_pid = os.getpid()
-print(current_pid)
 all_pids = os.popen("ps aux | grep 'teits_ui.py' | awk '{print $2}'").read().split('\n')[:-1]
 for pid in all_pids:
     if int(pid) != current_pid:
-        print("killing {}".format(pid))
+        logging.info("killing {}".format(pid))
         os.system("kill -9 {}".format(pid))
 
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--reset', dest='reset', default=False, help='Reset stream and drone positions')
-args = parser.parse_args()
 
 CLUSTER_NAME = settings.CLUSTER_NAME
 CLUSTER_IP = settings.CLUSTER_IP
@@ -62,36 +60,34 @@ dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
 recording_producer = Producer({'streams.producer.default.stream': RECORDING_STREAM})
 
-# consumers = {}
-# consumers["source"] = consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_source"])
-# consumers["processed"] = consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_processed"])
 
+# Stream video from the video stream
 def stream_video(drone_id):
     global VIDEO_STREAM
     global OFFSET_RESET_MODE
     global DISPLAY_STREAM_NAME
 
-    print('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
+    logging.info('Start of loop for {}:{}'.format(VIDEO_STREAM,drone_id))
     consumer_group = str(time.time())
     consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})  
     consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
     current_stream = DISPLAY_STREAM_NAME
     
     while True:
-        print(DISPLAY_STREAM_NAME)
+        # logging.info(DISPLAY_STREAM_NAME)
         if DISPLAY_STREAM_NAME != current_stream:
           consumer_group = str(time.time())
           consumer = Consumer({'group.id': consumer_group, 'default.topic.config': {'auto.offset.reset': OFFSET_RESET_MODE}})
           consumer.subscribe([VIDEO_STREAM + ":" + drone_id + "_" + DISPLAY_STREAM_NAME ])
           current_stream = DISPLAY_STREAM_NAME
-          print("stream changed")
+          logging.info("stream changed")
         msg = consumer.poll(timeout=1)
         if msg is None:
             continue
         if not msg.error():
             json_msg = json.loads(msg.value().decode('utf-8'))
             image = json_msg['image']
-            print("playing {}".format(image))
+            # logging.info("playing {}".format(image))
             try:
               while not os.path.isfile(image):
                     time.sleep(0.05)
@@ -100,14 +96,16 @@ def stream_video(drone_id):
                 b = bytearray(f)
               yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
             except Exception as ex:
-              print("can't open file {}".format(image))
-              print(ex)
+              logging.info("can't open file {}".format(image))
+              logging.exception()
 
         elif msg.error().code() != KafkaError._PARTITION_EOF:
-            print('  Bad message')
-            print(msg.error())
+            logging.info('  Bad message')
+            logging.info(msg.error())
             break
-    print("Stopping video loop for {}".format(drone_id))
+    logging.info("Stopping video loop for {}".format(drone_id))
+
+
 
 
 app = Flask(__name__)
@@ -145,7 +143,7 @@ def set_drone_position():
 
   try:
     current_position = dronedata_table.find_by_id(drone_id)["position"]
-    print("current position = {}".format(current_position))
+    logging.info("current position = {}".format(current_position))
     from_zone = current_position["zone"]
     current_status = current_position["status"]
   except:
@@ -159,13 +157,77 @@ def set_drone_position():
     action = "takeoff"
     message = {"drone_id":drone_id,"drop_zone":from_zone,"action":action}
     positions_producer.produce(drone_id, json.dumps(message))
-    print("New instruction : {}".format(message))
+    logging.info("New instruction : {}".format(message))
 
 
   message = {"drone_id":drone_id,"drop_zone":drop_zone,"action":action}
   positions_producer.produce(drone_id, json.dumps(message))
-  print("New instruction : {}".format(message))
+  logging.info("New instruction : {}".format(message))
   return "{} moved from zone {} to zone {} then {}".format(drone_id,from_zone,drop_zone,action)
+
+
+
+@app.route('/takeoff',methods=["POST"])
+def takeoff():
+  drone_id = request.form["drone_id"]
+  logging.info("{} takeoff command sent".format(drone_id))
+  message = {"drone_id":drone_id,"action":"takeoff"}
+  positions_producer.produce(drone_id, json.dumps(message))
+  return "Takeoff sent for {}".format(drone_id)
+
+# Force landing
+@app.route('/land',methods=["POST"])
+def land():
+  drone_id = request.form["drone_id"]
+  logging.info("{} land command sent".format(drone_id))
+  message = {"drone_id":drone_id,"action":"land"}
+  positions_producer.produce(drone_id, json.dumps(message))
+  return "Landing order sent for {}".format(drone_id)
+
+
+# Force landing~for all drones
+@app.route('/emergency_land',methods=["POST"])
+def emergency_land():
+  for i in range(settings.ACTIVE_DRONES):
+    drone_id = "drone_" + str(i)
+    message = {"drone_id":drone_id,"action":"land"}
+    positions_producer.produce(drone_id, json.dumps(message))
+    dronedata_table.update(_id=drone_id,mutation={"$put": {'last_command': "land"}})
+  return "Emergency landing sent to all drones"
+
+
+
+# Send intruction to drone to move to a given position.
+# if current drone position is landed, it first takeoff.
+@app.route('/move_drone',methods=["POST"])
+def move_drone():
+  drone_id = request.form["drone_id"]
+  drop_zone = request.form["drop_zone"]
+
+  try:
+    current_position = dronedata_table.find_by_id(drone_id)["position"]
+    logging.info("current position = {}".format(current_position))
+    from_zone = current_position["zone"]
+    current_status = current_position["status"]
+  except:
+    traceback.print_exc()
+    from_zone = "home_base"
+    current_status = "landed"
+
+
+  if from_zone != drop_zone and current_status == "landed":
+    # If move is required but drone is not flying, then takeoff before moving
+    action = "takeoff"
+    message = {"drone_id":drone_id,"action":action}
+    positions_producer.produce(drone_id, json.dumps(message))
+    logging.info("New instruction : {}".format(message))
+
+
+  message = {"drone_id":drone_id,"drop_zone":drop_zone}
+  positions_producer.produce(drone_id, json.dumps(message))
+  logging.info("New instruction : {}".format(message))
+  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone,action)
+
 
 
 
@@ -261,7 +323,7 @@ def get_count():
       dronedata = dronedata_table.find_by_id(drone_id)
       count = dronedata["count"]
     except Exception as ex:
-      print(ex)
+      logging.info(ex)
       traceback.print_exc()
       count = 0
     return str(count)
@@ -284,15 +346,9 @@ def get_connection_status():
   return dronedata_table.find_by_id(drone_id)["connection_status"]
 
 
-# Force landing
-@app.route('/land',methods=["POST"])
-def land():
-    drone_id = request.form["drone_id"]
-    drone = dronedata_table.find_by_id(drone_id)
-    current_zone = drone["position"]["zone"]
-    message = {"drone_id":drone_id,"drop_zone":current_zone,"action":"land"}
-    positions_producer.produce(drone_id, json.dumps(message))
-    return "Landing order sent for {}".format(drone_id)
+
+
+
 
 
 # Resets drone position to home_base:landed in the database and the positions stream
@@ -330,7 +386,7 @@ def edit():
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], "background"))
   # for zone in zones_table.find():
-  #   print(zone)
+  #   logging.info(zone)
 
   return render_template("edit_ui.html",zones=zones_table.find())
 
@@ -346,8 +402,8 @@ def save_zone():
   x = request.form['zone_x']
   y = request.form['zone_y']
   zone_doc = {'_id': name, "height":height,"width":width,"top":top,"left":left,"x":x,"y":y}
-  print("Zone saved")
-  print(zone_doc)
+  logging.info("Zone saved")
+  logging.info(zone_doc)
   zones_table.insert_or_replace(doc=zone_doc)
   return "{} updated".format(name)
 

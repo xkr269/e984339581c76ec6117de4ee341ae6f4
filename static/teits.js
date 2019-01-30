@@ -1,13 +1,17 @@
 // js file for TEITS main UI
 
 
-var DISPLAY_COUNT_TIMER = 500
+var DISPLAY_COUNT_TIMER = 1000
 var DISPLAY_SPEED_TIMER = 2000
 var DISPLAY_CONNECTION_STATUS_TIMER = 2000
 var DISPLAY_BATTERY_TIMER = 2000
-var PATROL_TIMER = 3000
+var PATROL_TIMER = 5000
 var GRAPH_TIMER = 2000 
 var graph_color = "#6CFC5F"
+
+var DRONE_1_READY = true
+var DRONE_2_READY = true
+var DRONE_3_READY = true
 
 
 
@@ -19,16 +23,28 @@ $(function(){
 
 
 
-function set_drone_position(drone_id,drop_zone,action){
-    console.log("Set " + drone_id + " position to " + drop_zone + " , action : " + action)
+function takeoff(drone_id){
+    console.log("Taking off " + drone_id)
     $.ajax({
-            url: 'set_drone_position',
+            url: 'takeoff',
             type: 'post',
-            data: {"drone_id":drone_id,"drop_zone":drop_zone,"action":action},
+            data: {"drone_id":drone_id},
             success:function(data){
                 console.log(data)
             }
-        });
+        }); 
+}
+
+function move_drone(drone_id,drop_zone){
+    console.log("Send moving instructions for " + drone_id + " to " + drop_zone)
+    $.ajax({
+            url: 'move_drone',
+            type: 'post',
+            data: {"drone_id":drone_id,"drop_zone":drop_zone},
+            success:function(data){
+                console.log(data)
+            }
+        }); 
 }
 
 
@@ -36,45 +52,48 @@ $('.drop.zone').droppable({
     drop : function(e,ui){
         var drop_zone = $(this).attr('id');
         var drone_id = ui.draggable.attr('id');
-        set_drone_position(drone_id,drop_zone);     
+        move_drone(drone_id,drop_zone);     
     },
 }); 
 
 $('.drop.zone').click(function(e){
-    var parentOffset = $(this).parent().offset(); 
+    var parentOffset = $(this).parent().offset();
+    move_drone("drone_1",e.target.id);
     $('#drone_1').animate({
             top : e.pageY - parentOffset.top - $('#drone_1').height()/2,
             left: e.pageX - parentOffset.left - $('#drone_1').width()/2
-            }, 2000, function() {
-                var drop_zone = e.target.id;
-                var drone_id = "drone_1";
-                set_drone_position(drone_id,drop_zone);  
-            });
+            }, 2000);
 });
 
 
 
 
-function move_to_position(drone_id,zone_id,action){
-    console.log("moving " + drone_id + " to " + zone_id);
+function move_sprite_to_zone(drone_id,zone_id){
+    console.log("Moving " + drone_id + " to " + zone_id + " on UI");
     // Define zone center
     var zone_div = $("#"+ zone_id);
     var drone_div = $('#' + drone_id);
     var position = zone_div.position();
     var height = zone_div.height();
     var width = zone_div.width();
-    set_drone_position(drone_id,zone_id,action);
     drone_div.animate({
         top : position.top + height/2 - drone_div.height()/2,
         left: position.left + width/2 - drone_div.width()/2
-        }, 2000);
+        }, 2000,function(){
+            if(drone_id == "drone_1"){DRONE_1_READY = true};
+            if(drone_id == "drone_2"){DRONE_2_READY = true};
+            if(drone_id == "drone_3"){DRONE_3_READY = true};
+        });
     }
 
 $("#back_home_button").click(function(){
     $(".drone").each(function(){
         console.log("Stop patrolling");
         patrol_in_progess = false;
-        if($(this).is(":visible")){move_to_position($(this).attr("id"),"home_base","land");}
+        if($(this).is(":visible")){
+            move_drone($(this).attr("id"),"home_base");
+            move_sprite_to_zone($(this).attr("id"),"home_base");
+        }
     })
 })
 
@@ -94,21 +113,6 @@ $("#land_button").click(function(){
     })
 })
 
-$("#land_button").click(function(){
-    $(".drone").each(function(){
-        console.log("Landing");
-        patrol_in_progess = false;
-        drone_id = $(this).attr("id");
-        $.ajax({
-            url: 'reset_position',
-            type: 'post',
-            data: {"drone_id":drone_id},
-            success:function(data){
-                console.log(data)
-            }
-        });
-    })
-})
 
 $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
@@ -116,7 +120,7 @@ $("#new_drone_button").click(function(){
             $("#drone_1_ui").show();
             $("#drone_1_video").attr("src","video_stream/drone_1");
             draw_chart("drone_1_count_graph","drone_1_count");
-            set_drone_position("drone_1","home_base","takeoff");
+            takeoff("drone_1");
             refresh_battery_pct("drone_1");
             refresh_speed("drone_1");
             refresh_count("drone_1");
@@ -128,7 +132,7 @@ $("#new_drone_button").click(function(){
             $("#drone_2_ui").show();
             $("#drone_2_video").attr("src","video_stream/drone_2");
             draw_chart("drone_2_count_graph","drone_2_count");
-            set_drone_position("drone_2","home_base","takeoff");
+            takeoff("drone_2");
             refresh_battery_pct("drone_2");
             refresh_speed("drone_2");
             refresh_count("drone_2");
@@ -139,7 +143,7 @@ $("#new_drone_button").click(function(){
             $("#drone_3_ui").show();
             $("#drone_3_video").attr("src","video_stream/drone_3");
             draw_chart("drone_3_count_graph","drone_3_count");
-            set_drone_position("drone_3","home_base","takeoff");
+            takeoff("drone_3");
             refresh_battery_pct("drone_3");
             refresh_speed("drone_3");
             refresh_count("drone_3");
@@ -172,26 +176,36 @@ function move_to_next_waypoint(drone_id){
             console.log("next waypoint for " + drone_id);
             console.log(data);
             var next_waypoint = data;
-            move_to_position(drone_id, next_waypoint);
+            move_drone(drone_id, next_waypoint);
+            move_sprite_to_zone(drone_id, next_waypoint);
         }
     });
 }
 
 
+
 function patrol(){
     console.log("Patroling");
-    $(".drone").each(function(){
-        var drone_id = $(this).attr("id")
-        if(patrol_in_progess && $(this).is(":visible")){
-            move_to_next_waypoint(drone_id);
+    if(DRONE_1_READY && DRONE_2_READY && DRONE_3_READY && patrol_in_progess){
+        $(".drone").each(function(){
+            var drone_id = $(this).attr("id")
+            if(drone_id == "drone_1"){DRONE_1_READY = false};
+            if(drone_id == "drone_2"){DRONE_2_READY = false};
+            if(drone_id == "drone_3"){DRONE_3_READY = false};
+            if(patrol_in_progess && $(this).is(":visible")){
+                move_to_next_waypoint(drone_id);
+            }
+        })
+    }else{
+        if(patrol_in_progess){
+            setTimeout(function(){
+                        patrol();
+                      }, 1000);
         }
-    })
-    if(patrol_in_progess){
-        setTimeout(function(){
-                    patrol();
-                  }, PATROL_TIMER);
     }
 }
+
+
 
 
 

@@ -19,13 +19,20 @@ from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 
 import settings
 
+import logging
+
+logging.basicConfig(filename=settings.LOG_FOLDER + "dispatcher.log" ,level=logging.DEBUG)
+
 
 ############################       Settings        #########################
+
+
 
 CLUSTER_IP = settings.CLUSTER_IP
 SOURCE_STREAM = settings.VIDEO_STREAM
 PROCESSORS_STREAM = settings.PROCESSORS_STREAM
 PROCESSORS_TABLE = settings.PROCESSORS_TABLE
+
 
 
 
@@ -42,9 +49,9 @@ def main():
 
     # Reset processors table
     for proc in processors_table.find():
-        print(proc)
+        # logging.info(proc)
         processors_table.delete(_id=proc["_id"])
-        print("deleted")
+        # logging.info("deleted")
 
     # Subscribe to source stream on given topics
     consumer_group = str(time.time())
@@ -63,7 +70,7 @@ def main():
     current_sec = 0
     received_messages = 0
     sent_messages = 0
-    print("waiting for new data ... ")
+    logging.info("waiting for new data ... ")
     while True:
         try:
             msg = main_consumer.poll()
@@ -95,7 +102,7 @@ def main():
                 # Print stats every second
                 elapsed_time = time.time() - start_time
                 if int(elapsed_time) != current_sec:
-                    print("Dispatching - Received {} msg/s , sent {} msg/s".format(received_messages,sent_messages))
+                    logging.info("Dispatching - Received {} msg/s , sent {} msg/s".format(received_messages,sent_messages))
                     received_messages = 0
                     sent_messages = 0
                     current_sec = int(elapsed_time)
@@ -103,7 +110,7 @@ def main():
 
 
         except Exception as ex:
-            print(ex)
+            logging.info(ex)
             traceback.print_exc()
 
 

@@ -36,10 +36,16 @@ from math import atan2, sqrt, pi, floor
 from shutil import copyfile
 import base64
 from io import BytesIO
+import logging
 
 import settings
 
 DRONE_ID = sys.argv[1]
+
+logging.basicConfig(filename=settings.LOG_FOLDER + "pilot_{}.log".format(DRONE_ID) ,level=logging.INFO)
+
+
+KILL_ALL = False
 
 # Remote mode sends data through a remote MaprDB buffer instead of writing directly to the FS
 REMOTE_MODE = False
@@ -47,7 +53,7 @@ if len(sys.argv)>2:
     if sys.argv[2] == "remote":
         REMOTE_MODE = True
 
-print("Remote mode : {}".format(REMOTE_MODE))
+logging.info("Remote mode : {}".format(REMOTE_MODE))
 
 
 def get_cluster_name():
@@ -62,7 +68,7 @@ def get_cluster_ip():
 
 def check_stream(stream_path):
   if not os.path.islink(stream_path):
-    print("stream {} is missing. Exiting.".format(stream_path))
+    logging.info("stream {} is missing. Exiting.".format(stream_path))
     sys.exit()
 
 
@@ -88,7 +94,7 @@ CLUSTER_IP = get_cluster_ip()
 
 ROOT_PATH = settings.ROOT_PATH
 DATA_FOLDER = settings.DATA_FOLDER
-IMAGE_FOLDER = DATA_FOLDER + DRONE_ID + "/images/source/"
+IMAGE_FOLDER = DATA_FOLDER + "/images/" + DRONE_ID + +"/source/"
 VIDEO_STREAM = settings.VIDEO_STREAM
 POSITIONS_STREAM = settings.POSITIONS_STREAM
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
@@ -106,6 +112,8 @@ connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 dronedata_table.insert_or_replace({"_id":DRONE_ID,
+                                   "status":"ready",
+                                   "last_command":"land",
                                    "flight_data":{"battery":50,"fly_speed":5.0},
                                    "log_data":"unset",
                                    "count":0,
@@ -127,13 +135,17 @@ check_stream(POSITIONS_STREAM)
 
 # Function for transfering the video frames to FS and Stream
 def get_drone_video(drone):
+
+    logging.info("Getting video from drone")
+
     global STREAM_FPS
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
     global REMOTE_MODE
+    global KILL_ALL
 
-    print("producing into {}".format(VIDEO_STREAM))
+    logging.info("producing video stream into {}".format(VIDEO_STREAM))
 
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
 
@@ -149,13 +161,15 @@ def get_drone_video(drone):
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        while drone.state != drone.STATE_QUIT:
-            print("Drone is connected - decoding container")
+        while drone.state != drone.STATE_QUIT and not KILL_ALL:
+            logging.info("Drone is connected - decoding container")
             try:
                 for frame in container.decode(video=0):
-                    if drone.state != drone.STATE_CONNECTED:
-                        print("Drone disconnected - QUITTING VIDEO THREAD")
+                    if KILL_ALL:
                         break
+                    # if drone.state != drone.STATE_CONNECTED:
+                    #     logging.info("Drone disconnected - QUITTING VIDEO THREAD")
+                    #     break
                     received_frames += 1
                     current_time = time.time()
                     if current_time > (last_frame_time + float(1/STREAM_FPS)):
@@ -167,30 +181,31 @@ def get_drone_video(drone):
                                 frame.to_image().save(buffered,format="JPEG")
                                 buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(buffered.getvalue())})
                                 buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
-                                print("{} sent to buffer".format(new_image))
+                                # logging.info("{} sent to buffer".format(new_image))
                                 i += 1
                             else:
                                 frame.to_image().save(new_image)
                         except Exception as ex:
-                            print(ex)
+                            logging.info(ex)
                             traceback.print_exc()
 
                         video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
-                                                                            "index":index,
-                                                                            "image":new_image}))
+                                                                                 "index":index,
+                                                                                 "image":new_image}))
                         sent_frames += 1
                         last_frame_time = time.time()
 
                     # Print stats every second
                     elapsed_time = time.time() - start_time
                     if int(elapsed_time) != current_sec:
-                        print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                        logging.info("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
                         received_frames = 0
                         sent_frames = 0
                         current_sec = int(elapsed_time)
             except:
-                traceback.print_exc()
-                container = av.open(drone.get_video_stream())
+                logging.exception()
+                # traceback.print_exc()
+                # container = av.open(drone.get_video_stream())
 
     # Catch exceptions
     except Exception:
@@ -205,8 +220,9 @@ def stream_recording():
     global IMAGE_FOLDER
     global RECORDING_STREAM
     global RECORDING_FOLDER
+    global KILL_ALL
 
-    print("Producing video from records into {}".format(VIDEO_STREAM))
+    logging.info("Producing video from records into {}".format(VIDEO_STREAM))
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
     consumer_group = str(time.time())
     video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
@@ -222,22 +238,22 @@ def stream_recording():
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        print("{} subscribed to {} video stream".format(DRONE_ID,stream_zone))
-        while True:
+        logging.info("{} subscribed to {} video stream".format(DRONE_ID,stream_zone))
+        while not KILL_ALL:
             current_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
-            # print("current_zone = {}".format(current_zone))
+            # logging.info("current_zone = {}".format(current_zone))
             if current_zone != stream_zone:
                 stream_zone = current_zone
                 consumer_group = str(time.time())
                 video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
-                print("subscribed to {} video stream".format(stream_zone))
+                logging.info("subscribed to {} video stream".format(stream_zone))
 
             msg = video_consumer.poll(timeout=1)
 
 
             if msg is None :
-                # print("timeout")
+                # logging.info("timeout")
                 consumer_group = str(time.time())
                 video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
@@ -245,7 +261,7 @@ def stream_recording():
 
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
-                # print("emulator for {} . producing {}".format(DRONE_ID,json_msg["image"]))
+                # logging.info("emulator for {} . producing {}".format(DRONE_ID,json_msg["image"]))
                 received_frames += 1
                 current_time = time.time()
 
@@ -261,17 +277,17 @@ def stream_recording():
                     last_frame_time = time.time()
 
             elif msg.error().code() == KafkaError._PARTITION_EOF:
-                print("end of partition")
+                logging.info("end of partition")
                 consumer_group = str(time.time())
                 video_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'earliest'}})
                 video_consumer.subscribe([RECORDING_STREAM + ":" + stream_zone])
-                print("subscribed to {} video stream".format(stream_zone))
+                logging.info("subscribed to {} video stream".format(stream_zone))
                 continue
 
             # Print stats every second
             elapsed_time = time.time() - start_time
             if int(elapsed_time) != current_sec:
-                print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                logging.info("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
                 received_frames = 0
                 sent_frames = 0
                 current_sec = int(elapsed_time)
@@ -288,7 +304,9 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
     global DRONE_ID
     global VIDEO_STREAM
     global IMAGE_FOLDER
-    # print("producing into {}".format(VIDEO_STREAM))
+    global KILL_ALL
+
+    # logging.info("producing into {}".format(VIDEO_STREAM))
     video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
     current_sec = 0
     last_frame_time = 0
@@ -297,14 +315,16 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
         start_time = time.time()
         received_frames = 0
         sent_frames = 0
-        while True:
+        while not KILL_ALL:
             try:
                 stream_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
                 zone_video = RECORDING_FOLDER + stream_zone + ".mp4"
-                print("playing {} ".format(zone_video))
+                logging.info("playing {} ".format(zone_video))
                 container = av.open(zone_video)
                 
                 for frame in container.decode(video=0):
+                    if KILL_ALL:
+                        break
                     received_frames += 1
                     current_time = time.time()
                     if current_time > (last_frame_time + float(1/STREAM_FPS)):
@@ -316,14 +336,14 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
                                 frame.to_image().save(buffered,format="JPEG")
                                 buffer_table.insert_or_replace({"_id":"{}".format(i),"image_name":new_image,"image_bytes":base64.b64encode(buffered.getvalue())})
                                 buffer_table.insert_or_replace({"_id":"last_id","last_id":"{}".format(i)})
-                                print("{} sent to buffer".format(new_image))
+                                logging.info("{} sent to buffer".format(new_image))
                                 i += 1
                             else:
                                 frame.to_image().save(new_image)
                         except Exception as ex:
-                            print(ex)
+                            logging.info(ex)
                             traceback.print_exc()
-                        print("producing {}".format(new_image))
+                        logging.info("producing {}".format(new_image))
                         video_producer.produce(DRONE_ID+"_source", json.dumps({"drone_id":DRONE_ID,
                                                                             "index":index,
                                                                             "image":new_image}))
@@ -334,13 +354,13 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
                             stream_zone = current_zone
                             zone_video = RECORDING_FOLDER + stream_zone + ".mp4"
                             container = av.open(zone_video)
-                            print("playing {} ".format(zone_video))
+                            logging.info("playing {} ".format(zone_video))
                             break
 
                     # Print stats every second
                     elapsed_time = time.time() - start_time
                     if int(elapsed_time) != current_sec:
-                        print("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                        logging.info("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
                         received_frames = 0
                         sent_frames = 0
                         current_sec = int(elapsed_time)
@@ -363,95 +383,115 @@ def play_video_from_file(): # file name has to be "zone_name.mp4"
 #######################    MOVE PROCESSING    ##################
 
 def move_to_zone(drone,start_zone,drop_zone):
+
+
     global current_angle
 
-    print("...   moving from {} to {}".format(start_zone,drop_zone))
-    # get start_zone coordinates
-    current_position_document = zones_table.find_by_id(start_zone)
-    current_position = (float(current_position_document["x"]),float(current_position_document["y"]))
-    # get drop_zone coordinates
-    new_position_document = zones_table.find_by_id(drop_zone)
-    new_position = (float(new_position_document["x"]),float(new_position_document["y"]))
+    try:
 
-    # calcul du deplacement
-    y = new_position[1] - current_position[1] # Back and Front
-    x = new_position[0] - current_position[0] # Left and Right
+        logging.info("...   moving from {} to {}".format(start_zone,drop_zone))
+        # get start_zone coordinates
+        current_position_document = zones_table.find_by_id(start_zone)
+        current_position = (float(current_position_document["x"]),float(current_position_document["y"]))
+        # get drop_zone coordinates
+        new_position_document = zones_table.find_by_id(drop_zone)
+        new_position = (float(new_position_document["x"]),float(new_position_document["y"]))
 
-    if DIRECTIONAL_MODE == "LINEAR" :
-        if y > 0:
-            drone.forward(y)
-        elif y < 0:
-            drone.backward(-y)
-        if y != 0:
-            print("Sleep {}".format(abs(FORWARD_COEF*y)))
-            time.sleep(max(1,abs(FORWARD_COEF*y)))
-
-        if x > 0:
-            drone.right(x)
-        elif x < 0:
-            drone.left(-x)
-        if x != 0:
-            print("Sleep {}".format(abs(FORWARD_COEF*x)))
-            time.sleep(max(1,abs(FORWARD_COEF*x)))
-    else:
-        # calcul angle de rotation vs axe Y   
-        target_angle = (atan2(x,y)*180/pi + 180) % 360 - 180
-
-        print("drone orientation : {}".format(current_angle))
-        print("target angle : {}".format(target_angle))
-
-        angle =  (target_angle - current_angle + 180) % 360 - 180 
-        print("direction vs drone : {}".format(angle))
-
-        if DIRECTIONAL_MODE == "OPTIMIZED":
-            # calcul du cadran
-            cadran = int(floor(angle/45))
-            print("cadran = {}".format(cadran))
-
-            # calcul offset et deplacement
-            if cadran in [-1,0]:
-                offset = angle
-                move = drone.forward
-            elif cadran in [1,2]:
-                offset = angle - 90
-                move = drone.right
-            elif cadran in [-4,3]:
-                offset = (angle + 90) % 180 - 90
-                move = drone.backward
-            elif cadran in [-2,-3]:
-                offset = angle + 90
-                move = drone.left
-
-            print("offset : {}".format(offset))
-            print("move : {}".format(move))
-
-        elif DIRECTIONAL_MODE == "FORWARD":
-            move = drone.forward
-            offset = angle 
-            print("forward mode, offset : {}".format(offset))
+        # calcul du deplacement
+        y = new_position[1] - current_position[1] # Back and Front
+        x = new_position[0] - current_position[0] # Left and Right
 
         # distance a parcourir
         distance = sqrt(x*x + y*y)
+        offset = 0
 
-        print("distance : {}".format(distance))
-
-        if abs(offset) > 0:
-            print("###############      turning {} degrees".format(angle))
-            drone.turn(offset)
-            print("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
-            time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
-
-        # deplacement        
-        if distance > 0 :
-            move(distance)
-            print("sleep {}".format(max(1,distance * FORWARD_COEF)))
+        if DIRECTIONAL_MODE == "DIRECT" :
+            command = "go {} {} 0 100".format(y*100,x*100)
+            mutation = {"$put":{"last_command":command}}
+            drone.custom_command(command)
             time.sleep(max(1,distance * FORWARD_COEF))
 
-        current_angle += offset
+        if DIRECTIONAL_MODE == "LINEAR" :
+            if y > 0:
+                drone.forward(y)
+            elif y < 0:
+                drone.backward(-y)
+            if y != 0:
+                logging.info("Sleep {}".format(abs(FORWARD_COEF*y)))
+                time.sleep(max(1,abs(FORWARD_COEF*y)))
+
+            if x > 0:
+                drone.right(x)
+            elif x < 0:
+                drone.left(-x)
+            if x != 0:
+                logging.info("Sleep {}".format(abs(FORWARD_COEF*x)))
+                time.sleep(max(1,abs(FORWARD_COEF*x)))
+        else:
+            # calcul angle de rotation vs axe Y   
+            target_angle = (atan2(x,y)*180/pi + 180) % 360 - 180
+
+            logging.info("drone orientation : {}".format(current_angle))
+            logging.info("target angle : {}".format(target_angle))
+
+            angle =  (target_angle - current_angle + 180) % 360 - 180 
+            logging.info("direction vs drone : {}".format(angle))
+
+            if DIRECTIONAL_MODE == "OPTIMIZED":
+                # calcul du cadran
+                cadran = int(floor(angle/45))
+                logging.info("cadran = {}".format(cadran))
+
+                # calcul offset et deplacement
+                if cadran in [-1,0]:
+                    offset = angle
+                    move = drone.forward
+                elif cadran in [1,2]:
+                    offset = angle - 90
+                    move = drone.right
+                elif cadran in [-4,3]:
+                    offset = (angle + 90) % 180 - 90
+                    move = drone.backward
+                elif cadran in [-2,-3]:
+                    offset = angle + 90
+                    move = drone.left
+
+                logging.info("offset : {}".format(offset))
+                logging.info("move : {}".format(move))
+
+            elif DIRECTIONAL_MODE == "FORWARD":
+                move = drone.forward
+                offset = angle 
+                logging.info("forward mode, offset : {}".format(offset))
+
+            
+
+            logging.info("distance : {}".format(distance))
+
+            if abs(offset) > 0:
+                logging.info("###############      turning {} degrees".format(angle))
+                drone.turn(offset)
+                logging.info("sleep {}".format(max(1,float(abs(offset) * ANGULAR_COEF / 360))))
+                time.sleep(max(1,float(abs(offset) * ANGULAR_COEF / 360)))
+
+            # deplacement        
+            if distance > 0 :
+                move(distance)
+                logging.info("sleep {}".format(max(1,distance * FORWARD_COEF)))
+                time.sleep(max(1,distance * FORWARD_COEF))
+
+            current_angle += offset
+    except:
+        traceback.print_exc()
+        logging.exception()
+        drone.land()
+        time.sleep(1)
+        sys.exit()
 
 
 def set_homebase():
     dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":"home_base", "status":"landed","offset":current_angle}}})
+    logging.info("Drone position reset to homebase")
 
 
 
@@ -473,8 +513,7 @@ def handler(event, sender, data, **args):
                                "gyro_y":data.imu.gyro_y,
                                "gyro_z":data.imu.gyro_z}}
         mutation = {"$put": {'log_data': log_data_doc}}
-        # dronedata_table.update(_id=DRONE_ID,mutation=mutation)
-        # print(dronedata_table.find_by_id(DRONE_ID)["log_data"]);
+        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
 
 
     if event is drone.EVENT_FLIGHT_DATA:
@@ -486,9 +525,9 @@ def handler(event, sender, data, **args):
         try:
             dronedata_table.update(_id=DRONE_ID,mutation=mutation)
         except Exception as ex:
-            print(str(ex))
+            logging.exception()
             if "EXPIRED" in str(ex):
-                print("EXPIRED")
+                logging.info("EXPIRED")
 
 
 
@@ -496,7 +535,10 @@ def handler(event, sender, data, **args):
 
 def main():
 
+    logging.info("Pilot started for {}".format(DRONE_ID))
+
     global current_angle
+    global KILL_ALL
 
     fly_drone = DRONE_MODE=="live" and not NO_FLIGHT
 
@@ -514,7 +556,7 @@ def main():
         drone.connect()
         drone.wait_for_connection(600)
 
-    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
+    dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status':"connected"}})
 
     # create video thread
     if DRONE_MODE == "replay":
@@ -529,31 +571,31 @@ def main():
 
     start_time = time.time()
     consumer_group = DRONE_ID + str(time.time())
-    positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset': 'latest'}})
+    positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset':'latest'}})
     positions_consumer.subscribe([POSITIONS_STREAM + ":" + DRONE_ID])
 
     while True:
         try:
-            # print("waiting for instructions - drone state = {}".format(dronedata_table.find_by_id(DRONE_ID)["connection_status"]))
+            # logging.info("waiting for instructions - drone state = {}".format(dronedata_table.find_by_id(DRONE_ID)["connection_status"]))
             msg = positions_consumer.poll(timeout=1)
             if msg is None:
                 # Check that Drone is still connected
                 # if not, restarts.
                 if DRONE_MODE != "live":
                     if drone.state != drone.STATE_CONNECTED:
-                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "disconnected"}})
+                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status':"disconnected"}})
 
                     if drone.state == drone.STATE_QUIT:
                         drone.sock.close()
                         while videoThread.isAlive() or drone.video_thread_running:
-                            print("wait for threads to stop")
+                            logging.info("wait for threads to stop")
                             time.sleep(1)
-                        print("reconnecting ...")
+                        logging.info("reconnecting ...")
                         drone = tellopy.Tello()
                         drone.connect()
                         drone.wait_for_connection(600)
-                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status': "connected"}})
-                        print("connected - starting video thread")
+                        dronedata_table.update(_id=DRONE_ID,mutation={"$put":{'connection_status':"connected"}})
+                        logging.info("connected - starting video thread")
                         # recreate video thread
                         videoThread = threading.Thread(target=get_drone_video,args=[drone])
                         videoThread.start()
@@ -561,56 +603,88 @@ def main():
 
             # Proceses moving instructions
             if not msg.error():
+
                 json_msg = json.loads(msg.value().decode('utf-8'))
-                print(json_msg)
-                from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
-                drop_zone = json_msg["drop_zone"]
-                
-                if drop_zone != from_zone:
-                    if fly_drone:
-                        move_to_zone(drone,from_zone,drop_zone)
-                    if not settings.DRONE_MODE == "live":
-                        flight_data_doc = {"battery":str(randint(50,100)),
-                                           "fly_speed":str(randint(0,10))}
-                        mutation = {"$put": {'flight_data': flight_data_doc}}
+
+                if "action" in json_msg:
+                    action = json_msg["action"]
+                    if action == "takeoff":
+                        logging.info("....................................................  Takeoff")
+                        mutation = {"$put":{"status":"busy"}}
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
-                    
-                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
-                    print("...  Moved")
-
-
-                if json_msg["action"] == "takeoff":
-                    print("...  Takeoff")
-                    if fly_drone:
+                        mutation = {"$put":{"last_command":"takeoff"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
                         drone.takeoff()
-                        time.sleep(3)
-                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
+
+                    if action == "land":
+                        logging.info("....................................................  Land")
+                        # mutation = {"$put":{"status":"busy","last_command":"land"}}
+                        # dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        drone.land()
+
+                else:
+                    from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+                    drop_zone = json_msg["drop_zone"]
+                    if drop_zone != from_zone:
+                        if fly_drone:
+                            mutation = {"$put":{"status":"busy"}}
+                            move_to_zone(drone,from_zone,drop_zone)
+
+                # from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
+                # drop_zone = json_msg["drop_zone"]
+                
+                # if drop_zone != from_zone:
+                #     if fly_drone:
+                #         move_to_zone(drone,from_zone,drop_zone)
+                #     if not settings.DRONE_MODE == "live":
+                #         flight_data_doc = {"battery":str(randint(50,100)),
+                #                            "fly_speed":str(randint(0,10))}
+                #         mutation = {"$put": {'flight_data': flight_data_doc}}
+                #         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                    
+                #     dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
+                #     logging.info("...  Moved")
+
+
+                # if json_msg["action"] == "takeoff":
+                #     logging.info("...  Takeoff")
+                #     if fly_drone:
+                #         drone.takeoff()
+                #         time.sleep(3)
+                #     dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"flying","offset":current_angle}}})
 
                     
-                if json_msg["action"] == "land":
-                    print("...    Land")
-                    if fly_drone:
-                        drone.land()
-                        print("landed")
-                    dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"landed","offset":current_angle}}})
-                    time.sleep(5)
+                # if json_msg["action"] == "land":
+                #     logging.info("...    Land")
+                #     if fly_drone:
+                #         drone.land()
+                #         logging.info("landed")
+                #     dronedata_table.update(_id=DRONE_ID,mutation={"$put": {"position": {"zone":drop_zone, "status":"landed","offset":current_angle}}})
+                #     time.sleep(5)
 
             elif msg.error().code() != KafkaError._PARTITION_EOF:
-                print(msg.error())
+                logging.info(msg.error())
 
         except KeyboardInterrupt:
             break   
 
         except Exception as ex:
-            print("...       EXCEPTION      ... ")
+            logging.info("...       EXCEPTION      ... ")
             traceback.print_exc()
+            break
         time.sleep(1)
 
-    print("QUITTING")
+    logging.info("QUITTING")
+
 
     if not DRONE_MODE:
         drone.quit()
 
+    KILL_ALL = True
+    drone.killall = True
+    logging.info("Exiting threads ... ")
+    time.sleep(5)
+    logging.info("threads killed.")
 
     sys.exit()
 

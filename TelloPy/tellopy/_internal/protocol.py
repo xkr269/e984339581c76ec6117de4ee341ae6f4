@@ -291,6 +291,7 @@ class LogData(object):
     def update(self, data):
         if isinstance(data, bytearray):
             data = str(data)
+        # print("data length : {}".format(len(data)))
 
         self.log.debug('LogData: data length=%d' % len(data))
         self.count += 1
