@@ -35,6 +35,7 @@ if len(sys.argv)>2:
 try:
     first_id = int(buffer_table.find_by_id("first_id")["first_id"])
 except KeyError:
+    logging.info('reseting first id to 0')
     first_id = 0
     buffer_table.insert_or_replace({"_id":"first_id","first_id":"0"})
 
@@ -42,6 +43,7 @@ try:
     last_id = int(buffer_table.find_by_id("last_id")["last_id"])
 except KeyError:
     last_id = first_id - 1
+    logging.info('reseting last id to {}'.format(last_id))
     buffer_table.insert_or_replace({"_id":"last_id","last_id":str(last_id)})
 
 
