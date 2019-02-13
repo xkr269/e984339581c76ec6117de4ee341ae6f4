@@ -51,9 +51,12 @@ KILL_ALL = False
 
 # Remote mode sends data through a remote MaprDB buffer instead of writing directly to the FS
 REMOTE_MODE = False
+SEND_VIDEO = True  
 if len(sys.argv)>2:
     if sys.argv[2] == "remote":
         REMOTE_MODE = True
+    if sys.argv[2] == "no_video":
+        SEND_VIDEO = False
 
 logging.info("Remote mode : {}".format(REMOTE_MODE))
 
@@ -158,6 +161,7 @@ def get_drone_video(drone):
     current_sec = 0
     last_frame_time = 0
     container = av.open(drone.get_video_stream())
+    i = 0
     try:
         start_time = time.time()
         received_frames = 0
@@ -168,6 +172,10 @@ def get_drone_video(drone):
                 for frame in container.decode(video=0):
                     if KILL_ALL:
                         break
+                    # skip first 400 frames
+                    i = i + 1
+                    if i < 400:
+                        continue
                     # if drone.state != drone.STATE_CONNECTED:
                     #     logging.info("Drone disconnected - QUITTING VIDEO THREAD")
                     #     break
@@ -600,7 +608,8 @@ def main():
     elif DRONE_MODE == "live":
         videoThread = threading.Thread(target=get_drone_video,args=[drone])
 
-    videoThread.start()
+    if SEND_VIDEO:
+        videoThread.start()
 
 
     start_time = time.time()
@@ -668,16 +677,22 @@ def main():
 
 
                 else:
+                    logging.info(".....................................................  Moving ")
                     from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]
                     drop_zone = json_msg["drop_zone"]
                     if drop_zone != from_zone:
                         if fly_drone:
                             mutation = {"$put":{"status":"busy"}}
+                            dronedata_table.update(_id=DRONE_ID,mutation=mutation)
                             move_to_zone(drone,from_zone,drop_zone)
-                            while not drone.ready:
+                            start_wait = time.time()
+                            while not drone.ready or time.time() > start_wait + 3 : # waits 3 seconds for the drone to stabilize
                                 time.sleep(0.1)
                             mutation = {"$put":{"position.zone":drop_zone}}
+                            dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                            mutation = {"$put":{"status":"waiting"}}
                             dronedata_table.update(_id=DRONE_ID,mutation=mutation) 
+                            
 
                 
 

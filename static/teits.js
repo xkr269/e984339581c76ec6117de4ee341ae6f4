@@ -83,6 +83,7 @@ function move_sprite_to_zone(drone_id,zone_id){
         top : position.top + height/2 - drone_div.height()/2,
         left: position.left + width/2 - drone_div.width()/2
         }, 2000,function(){
+            console.log("move complete for " + drone_id)
             if(drone_id == "drone_1"){DRONE_1_READY = true};
             if(drone_id == "drone_2"){DRONE_2_READY = true};
             if(drone_id == "drone_3"){DRONE_3_READY = true};
@@ -218,7 +219,7 @@ function patrol(){
         if(patrol_in_progess){
             setTimeout(function(){
                         patrol();
-                      }, 1000);
+                      }, 500);
         }
     }
 }
