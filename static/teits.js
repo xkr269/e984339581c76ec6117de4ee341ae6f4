@@ -30,6 +30,7 @@ function takeoff(drone_id){
             type: 'post',
             data: {"drone_id":drone_id},
             success:function(data){
+                console.log("drone " + drone_id + " takeoff success :");
                 console.log(data)
             }
         }); 
@@ -42,6 +43,7 @@ function move_drone(drone_id,drop_zone){
             type: 'post',
             data: {"drone_id":drone_id,"drop_zone":drop_zone},
             success:function(data){
+                console.log("drone " + drone_id + " move success :");
                 console.log(data)
             }
         }); 
@@ -58,6 +60,7 @@ $('.drop.zone').droppable({
 
 $('.drop.zone').click(function(e){
     var parentOffset = $(this).parent().offset();
+    console.log("moving drone_1 to " + e.target.id + " on UI")
     move_drone("drone_1",e.target.id);
     $('#drone_1').animate({
             top : e.pageY - parentOffset.top - $('#drone_1').height()/2,
@@ -113,6 +116,21 @@ $("#land_button").click(function(){
     })
 })
 
+$("#reset_button").click(function(){
+    $(".drone").each(function(){
+        console.log("Reseting drones position");
+        patrol_in_progess = false;
+        drone_id = $(this).attr("id");
+        $.ajax({
+            url: 'reset_position',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log(data)
+            }
+        });
+    })
+})
 
 $("#new_drone_button").click(function(){
         if (!$("#drone_1_ui").is(":visible")){
@@ -443,7 +461,7 @@ $( document ).ready(function() {
                      position: 'absolute'});
         });*/
 
-    $("#drone_1").css({top: "30%",
+    $("#drone_1").css({top: "45%",
                  left: "45%",
                  position: 'absolute'});
 

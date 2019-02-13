@@ -21,7 +21,7 @@ import settings
 
 import logging
 
-logging.basicConfig(filename=settings.LOG_FOLDER + "dispatcher.log" ,level=logging.DEBUG)
+logging.basicConfig(filename=settings.LOG_FOLDER + "dispatcher.log" ,level=logging.INFO)
 
 
 ############################       Settings        #########################
@@ -110,8 +110,7 @@ def main():
 
 
         except Exception as ex:
-            logging.info(ex)
-            traceback.print_exc()
+            logging.exception("failed")
 
 
 if __name__ == '__main__':

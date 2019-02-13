@@ -36,7 +36,7 @@ for pid in all_pids:
 
 def launch_script(script_name,arg=None):
     if arg:
-        return subprocess.Popen(["python", settings.ROOT_PATH + script_name,arg])
+        return subprocess.Popen(["python", settings.ROOT_PATH + script_name,arg,"remote"])
     else:
         return subprocess.Popen(["python", settings.ROOT_PATH + script_name])
 

@@ -100,7 +100,7 @@ def face_detection(image):
 
     global faceCascade
 
-    # print("processing {}".format(message["image"]))
+    # logging.info("processing {}".format(message["image"]))
     while not os.path.isfile(image):
         time.sleep(0.05)
     image_array = numpy.array(Image.open(message["image"]))
@@ -143,9 +143,14 @@ def processing_function(message):
 
 
 # Sets processor as available
-# print("Set {} as available".format(PROCESSOR_ID))
+# logging.info("Set {} as available".format(PROCESSOR_ID))
 processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
+processed_messages_list = []
+
+start_time = time.time()
+current_sec = 0
+processed_frames = 0
 
 while True:
     msg = consumer.poll()
@@ -155,6 +160,7 @@ while True:
         try:
             received_msg = json.loads(msg.value().decode("utf-8"))
             offset = received_msg["offset"]
+            # logging.info("new message : {}".format(offset))
             
             if offset < processors_table.find_by_id("offset")["offset"]:
                 # If the message offset is lower than the latest committed offset
@@ -174,13 +180,14 @@ while True:
             last_committed_offset = processors_table.find_by_id("offset")["offset"]
             while last_committed_offset != (offset - 1) and time.time() < (check_time + ALLOWED_LAG):
                 if display_wait:
-                    print('Waiting for previous frame to complete - Current offest : {}, Last committed offset : {}'.format(offset,last_committed_offset))
+                    logging.info('Waiting for previous frame to complete - Current offset : {}, Last committed offset : {}'.format(offset,last_committed_offset))
                     display_wait = False
                 last_committed_offset = processors_table.find_by_id("offset")["offset"]
 
-            print("Message {} - offset {} processed".format(received_msg["index"],offset))
+            processed_messages_list.append(received_msg["index"])
+            # logging.info("Message {} - offset {} processed".format(received_msg["index"],offset))
             if not display_wait:
-                print("Wait time : {}".format(time.time() - check_time))
+                logging.info("Wait time : {}".format(time.time() - check_time))
             topic = processed_message["drone_id"] + "_processed"
             producer.produce(topic,json.dumps(processed_message))
 
@@ -188,20 +195,27 @@ while True:
             processors_table.insert_or_replace({"_id":"offset","offset":offset})
             
             # Set processor as available
-            # print("Set {} as available".format(PROCESSOR_ID))
+            # logging.info("Set {} as available".format(PROCESSOR_ID))
             processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
+
+            # Print stats every second
+            elapsed_time = time.time() - start_time
+            if int(elapsed_time) != current_sec:
+                logging.info("Elapsed : {} s, processed {} fps, {}".format(int(elapsed_time),processed_frames,processed_messages_list))
+                processed_frames = 0
+                processed_messages_list = []
+                current_sec = int(elapsed_time)
 
 
         except KeyboardInterrupt:
             break   
 
         except Exception as ex:
-            print(ex)
-            traceback.print_exc()
+            logging.exception("fails")
             break
 
     elif msg.error().code() != KafkaError._PARTITION_EOF:
-        print(msg.error())
+        logging.info(msg.error())
         break
 
 # Unregisters the processor from the processors table 

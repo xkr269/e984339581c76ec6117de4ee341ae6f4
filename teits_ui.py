@@ -97,7 +97,8 @@ def stream_video(drone_id):
               yield (b'--frame\r\n' + b'Content-Type: image/jpg\r\n\r\n' + b + b'\r\n\r\n')
             except Exception as ex:
               logging.info("can't open file {}".format(image))
-              logging.exception()
+              logging.exception("fails")
+
 
         elif msg.error().code() != KafkaError._PARTITION_EOF:
             logging.info('  Bad message')
@@ -170,18 +171,18 @@ def set_drone_position():
 @app.route('/takeoff',methods=["POST"])
 def takeoff():
   drone_id = request.form["drone_id"]
-  logging.info("{} takeoff command sent".format(drone_id))
   message = {"drone_id":drone_id,"action":"takeoff"}
   positions_producer.produce(drone_id, json.dumps(message))
+  logging.info("New instruction : {}".format(message))
   return "Takeoff sent for {}".format(drone_id)
 
 # Force landing
 @app.route('/land',methods=["POST"])
 def land():
   drone_id = request.form["drone_id"]
-  logging.info("{} land command sent".format(drone_id))
   message = {"drone_id":drone_id,"action":"land"}
   positions_producer.produce(drone_id, json.dumps(message))
+  logging.info("New instruction : {}".format(message))
   return "Landing order sent for {}".format(drone_id)
 
 
@@ -226,7 +227,7 @@ def move_drone():
   message = {"drone_id":drone_id,"drop_zone":drop_zone}
   positions_producer.produce(drone_id, json.dumps(message))
   logging.info("New instruction : {}".format(message))
-  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone,action)
+  return "{} moved from zone {} to zone {}".format(drone_id,from_zone,drop_zone)
 
 
 
@@ -358,7 +359,7 @@ def reset_position():
     dronedata_table.update(_id=drone_id,mutation={"$put": {'position.zone': "home_base"}})
     message = {"drone_id":drone_id,"drop_zone":"home_base","action":"land"}
     positions_producer.produce(drone_id, json.dumps(message))
-    return "Landing order sent for {}".format(drone_id)
+    return "Reset and landing order sent for {}".format(drone_id)
 
 
 

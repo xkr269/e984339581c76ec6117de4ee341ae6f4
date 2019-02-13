@@ -1141,6 +1141,7 @@ class Tello(object):
 
     def custom_command(self,cmd,param=None):
         """Send a custom command to the drone."""
+        self.ready = False
         if param :
             pkt = Packet(cmd + ' ' + param)
             log.info('Custom command sent : {} {}'.format(cmd,param))
@@ -1153,11 +1154,13 @@ class Tello(object):
     def forward(self,distance): # in meters
         distance = int(distance * 100)
         msg = "forward " + str(distance)
+        print(msg)
         return self.custom_command(msg)
 # 
     def backward(self,distance): # in meters
         distance = int(distance * 100)
         msg = "back " + str(distance)
+        print(msg)
         return self.custom_command(msg)
 # 
     def turn(self,angle): # in degrees
@@ -1423,11 +1426,14 @@ class Tello(object):
             log.info('start of packet != %02x (%02x) (ignored)' % (START_OF_PACKET, data[0]))
             log.info('    %s' % byte_to_hexstring(data))
             log.info('    %s' % str(map(chr, data))[1:-1])
+            print(data)
+            if data == "OK":
+                self.ready = True
             return False
 
         pkt = Packet(data)
         cmd = uint16(data[5], data[6])
-        
+
         if cmd == LOG_HEADER_MSG:
             id = uint16(data[9], data[10])
             log.info("recv: log_header: id=%04x, '%s'" % (id, str(data[28:54])))

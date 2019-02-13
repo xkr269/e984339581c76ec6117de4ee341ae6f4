@@ -1,11 +1,15 @@
 import time
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
+from confluent_kafka import Producer, KafkaError
 import traceback
 import sys
 import base64
 import settings
 import logging
 import os
+import json
+import numpy as np
+import av
 
 
 
@@ -13,59 +17,92 @@ DRONE_ID = sys.argv[1]
 
 logging.basicConfig(filename=settings.LOG_FOLDER + "receiver_{}.log".format(DRONE_ID) ,level=logging.INFO)
 
+
 DATA_FOLDER = settings.DATA_FOLDER
 BUFFER_TABLE = DATA_FOLDER + "{}_buffer".format(DRONE_ID)
-os.system("rm -rf " + BUFFER_TABLE)
 CLUSTER_IP = settings.CLUSTER_IP
+VIDEO_STREAM = settings.VIDEO_STREAM
 
 # Create database connection
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 buffer_table = connection.get_or_create_store(BUFFER_TABLE)
 
-
-logging.info("Receiving ... ")
-
-if len(sys.argv)>2:
-    if sys.argv[2] == "reset":
-        buffer_table.insert_or_replace({"_id":"first_id","first_id":"0"})
-        buffer_table.insert_or_replace({"_id":"last_id","last_id":"-1"})
-        logging.info("Table reset")
-
-try:
-    first_id = int(buffer_table.find_by_id("first_id")["first_id"])
-except KeyError:
-    logging.info('reseting first id to 0')
-    first_id = 0
-    buffer_table.insert_or_replace({"_id":"first_id","first_id":"0"})
-
-try:
-    last_id = int(buffer_table.find_by_id("last_id")["last_id"])
-except KeyError:
-    last_id = first_id - 1
-    logging.info('reseting last id to {}'.format(last_id))
-    buffer_table.insert_or_replace({"_id":"last_id","last_id":str(last_id)})
+logging.info("Producing video from records into {}".format(VIDEO_STREAM))
+video_producer = Producer({'streams.producer.default.stream': VIDEO_STREAM})
 
 
-logging.info("first id : {}".format(first_id))
-logging.info("last id : {}".format(last_id))
+go_on = False
+while not go_on: 
+    try:
+        start_cleaning = time.time()
+        logging.info("cleaning database")
+        # Clean database
+        for doc in buffer_table.find({"$select":["_id"]}):
+            buffer_table.delete(_id=doc["_id"])
+        go_on = True
+        logging.info("db cleaned : {} s ".format(time.time()-start_cleaning))
+    except:
+        logging.exception("cleaning failed")
 
+
+start_time = time.time()
+received_frames = 0
+current_sec = 0
+
+time_tracker = {"min":1000,"max":0,"count":0,"avg":0}
 
 while True:
-    if first_id <= last_id:
-        message = buffer_table.find_by_id(str(first_id))
-        encoded_image = message["image_bytes"]
-        image_name = message["image_name"]
-        image = base64.b64decode(encoded_image)
-        with open(image_name, 'wb') as f_output:
-            f_output.write(image)
-        buffer_table.delete({"_id":str(first_id)})
-        logging.info("{} received and saved".format(image_name))
-        first_id += 1
-        buffer_table.insert_or_replace({"_id":"first_id","first_id":"{}".format(first_id)})
-    else:
-        last_id = int(buffer_table.find_by_id("last_id")["last_id"])
-        time.sleep(0.1)
-            
+    try:
+        logging.info("new query")
+        ids=[]
+        for message in buffer_table.find({"$select":["_id"]}):
+            ids.append(int(message["_id"]))
+
+        logging.info(ids)
+
+        for _id in sorted(ids):
+            start_track_time = time.time() 
+            _id = str(_id)
+            message = buffer_table.find_by_id(_id)
+            image_name = message["image_name"]
+            enc_str = message["image_bytes"]
+            shape = (message["shape_0"],message["shape_1"])
+            data_type = message["data_type"]
+            frame_format = message["format"]
+            dec_bytes = base64.b64decode(enc_str)
+            ndarray = np.frombuffer(dec_bytes,dtype = data_type).reshape(shape)
+            frame = av.video.frame.VideoFrame.from_ndarray(ndarray,format=frame_format)
+            frame.to_image().save(image_name)
+            index = _id
+
+            video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
+                                                                     "index":index,
+                                                                     "image":image_name}))
+            buffer_table.delete(_id=_id)   
+
+            received_frames += 1  
+
+            duration = time.time() - start_track_time
+            time_tracker["min"] = min(time_tracker["min"],duration)
+            time_tracker["max"] = max(time_tracker["max"],duration)
+            time_tracker["count"] += 1
+            time_tracker["avg"] = (time_tracker["avg"] * (time_tracker["count"] - 1) + duration) / time_tracker["count"]
+
+            # Print stats every second
+            elapsed_time = time.time() - start_time
+            if int(elapsed_time) != current_sec:
+                logging.info("Elapsed : {} s, received {} fps".format(int(elapsed_time),received_frames))
+                logging.info("Time tracker : {} ".format(time_tracker))
+                received_frames = 0
+                time_tracker["min"] = 100
+                time_tracker["max"] = 0
+                current_sec = int(elapsed_time)
+
+        logging.info("sleep")
+        time.sleep(1)
+    except:
+        logging.exception("failed")
+                
 
 
