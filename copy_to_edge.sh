@@ -1,3 +1,4 @@
+rm -rf /teits/
 mkdir /teits/
 mkdir /teits/logs/
 cp settings.py /teits/
