@@ -68,7 +68,7 @@ while True:
             image_name = message["image_name"]
             enc_str = message["image_bytes"]
             image = base64.b64decode(enc_str)
-            with open(image_name,'a') as image_file:
+            with open(image_name,'wb') as image_file:
                 image_file.write(image)
             index = _id
             video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,

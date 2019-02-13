@@ -179,10 +179,8 @@ def get_drone_video(drone):
                         new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
                         try:
                             if REMOTE_MODE:
-
-
                                 memfile = BytesIO()
-                                frame.to_image().save(memfile,format="JPEG",width=480,height=270) # getvalue
+                                frame.to_image().save(memfile,format="JPEG",width=480,height=270)
                                 image_bytes = base64.b64encode(memfile.getvalue())
                                 json_dict = {"_id":"{}".format(index),
                                             "image_name":new_image,
