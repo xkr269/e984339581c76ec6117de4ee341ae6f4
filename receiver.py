@@ -67,15 +67,10 @@ while True:
             message = buffer_table.find_by_id(_id)
             image_name = message["image_name"]
             enc_str = message["image_bytes"]
-            shape = (message["shape_0"],message["shape_1"])
-            data_type = message["data_type"]
-            frame_format = message["format"]
-            dec_bytes = base64.b64decode(enc_str)
-            ndarray = np.frombuffer(dec_bytes,dtype = data_type).reshape(shape)
-            frame = av.video.frame.VideoFrame.from_ndarray(ndarray,format=frame_format)
-            frame.to_image().save(image_name)
+            image = base64.b64decode(enc_str)
+            with open(image_name,'a') as image_file:
+                image_file.write(image)
             index = _id
-
             video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
                                                                      "index":index,
                                                                      "image":image_name}))

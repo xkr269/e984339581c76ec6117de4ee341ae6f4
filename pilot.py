@@ -179,19 +179,15 @@ def get_drone_video(drone):
                         new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
                         try:
                             if REMOTE_MODE:
-                                frame_format = frame.format.name
-                                ndarray = frame.to_ndarray(width=640,height=360)
-                                data_type = ndarray.dtype.name
-                                shape = ndarray.shape
-                                enc_bytes = ndarray.tobytes()
-                                enc_str = base64.b64encode(enc_bytes)
-                                buffer_table.insert_or_replace({"_id":"{}".format(index),
-                                                                "image_name":new_image,
-                                                                "image_bytes":enc_str,
-                                                                "shape_0":shape[0],
-                                                                "shape_1":shape[1],
-                                                                "data_type":data_type,
-                                                                "format":frame_format})
+
+
+                                memfile = BytesIO()
+                                frame.to_image().save(memfile,format="JPEG",width=480,height=270) # getvalue
+                                image_bytes = base64.b64encode(memfile)
+                                json_dict = {"_id":"{}".format(index),
+                                            "image_name":new_image,
+                                            "image_bytes":image_bytes}
+                                buffer_table.insert_or_replace(json_dict)
                             else:
                                 frame.to_image().save(new_image)
                                 video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
