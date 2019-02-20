@@ -107,10 +107,7 @@ def stream_video(drone_id):
     logging.info("Stopping video loop for {}".format(drone_id))
 
 
-
-
 app = Flask(__name__)
-
 
 
 ###################################
@@ -126,7 +123,6 @@ def home():
   for i in range(settings.ACTIVE_DRONES):
     drones.append("drone_{}".format(i+1))
   return render_template("teits_ui.html",active_drones=settings.ACTIVE_DRONES,zones=zones,display=display,drones=drones)
-
 
 
 # Gets move instructions from the web UI and push the new instruction to the posisions stream 

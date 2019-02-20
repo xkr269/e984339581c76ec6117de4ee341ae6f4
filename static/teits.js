@@ -217,10 +217,17 @@ function patrol(){
         })
     }else{
         if(patrol_in_progess){
+            console.log("repatrol");
             setTimeout(function(){
                         patrol();
                       }, 500);
         }
+    }
+    if(patrol_in_progess){
+        console.log("repatrol");
+        setTimeout(function(){
+                    patrol();
+                  }, PATROL_TIMER);
     }
 }
 

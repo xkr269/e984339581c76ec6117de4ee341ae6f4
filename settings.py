@@ -8,18 +8,16 @@ Settings files for TEITS demo project
 """
 
 
-ACTIVE_DRONES = 3 # Number of pilot processes launched
+ACTIVE_DRONES = 1 # Number of pilot processes launched
 NUMBER_OF_PROCESSORS = 3 # Each processor can analyse 2 to 3 images / second
-DRONE_MODE = "live"    # "replay" : replay recorded streams; "video" : plays video files, "live": send data from drones.
+DRONE_MODE = "video"    # "video" : plays video files, "live": send data from drones.
 NO_FLIGHT = False  # when True, the flight commands aren't sent to the drones.
 REMOTE_MODE = False # When True, drones pilots are supposed to be far from the main cluster. 
                    # Images are then sent using a direct connection to a DB buffer in the main cluster
 
 # Video settings
 STREAM_FPS = 10.0 # FPS sent by the pilot to the datastore
-REPLAYER_FPS = 100.0 # FPS replayed from recording
-RECORDER_FPS = 100.0 # FPR recorded from drone
-
+REPLAYER_FPS = 30.0 # FPS replayed from recording
 
 # Drone settings
 DIRECTIONAL_MODE = "LINEAR" # LINEAR (only x & y moves), OPTIMIZED (minimizes turns) or FORWARD (turns and forward) or DIRECT (no turn, just moveto the point)
@@ -69,7 +67,7 @@ RECORDING_STREAM = DATA_FOLDER + 'recording_stream' # Stream for the video frame
 # Generic Settings
 ALLOWED_LAG = 2 # Allowed lag between real time events and processed events
 OFFSET_RESET_MODE = 'latest' # latest for running the demo, earliest can be used for replaying existing streams
-DISPLAY_STREAM_NAME = "processed" # source or processed- whichstream is displayed in the UI
+DISPLAY_STREAM_NAME = "processed" # source or processed- which default stream is displayed in the UI
 
 
 

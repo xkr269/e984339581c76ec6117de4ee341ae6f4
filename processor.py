@@ -99,10 +99,6 @@ def people_detection(image):
 def face_detection(image):
 
     global faceCascade
-
-    # logging.info("processing {}".format(message["image"]))
-    while not os.path.isfile(image):
-        time.sleep(0.05)
     image_array = numpy.array(Image.open(message["image"]))
     image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -123,8 +119,12 @@ def face_detection(image):
 
 
 def processing_function(message):
-
-    image_array = numpy.array(Image.open(message["image"]))
+    while True:
+        try:
+            image_array = numpy.array(Image.open(message["image"]))
+            break
+        except:
+            continue
     image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     image = imutils.resize(image, width=min(400, image.shape[1]))
     (processed_image,count) = people_detection(image) 
@@ -143,7 +143,6 @@ def processing_function(message):
 
 
 # Sets processor as available
-# logging.info("Set {} as available".format(PROCESSOR_ID))
 processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
 processed_messages_list = []
@@ -160,12 +159,16 @@ while True:
         try:
             received_msg = json.loads(msg.value().decode("utf-8"))
             offset = received_msg["offset"]
-            # logging.info("new message : {}".format(offset))
             
             if offset < processors_table.find_by_id("offset")["offset"]:
                 # If the message offset is lower than the latest committed offset
                 # message is discarded
                 continue
+
+            # Wait for file to exist on the file system before sending it to the processor
+            while not os.path.isfile(received_msg["image"]):
+                time.sleep(0.05)
+            logging.info("{} exists".format(received_msg["image"]))
 
             # Processing the message
             processed_message = processing_function(received_msg)
@@ -185,7 +188,6 @@ while True:
                 last_committed_offset = processors_table.find_by_id("offset")["offset"]
 
             processed_messages_list.append(received_msg["index"])
-            # logging.info("Message {} - offset {} processed".format(received_msg["index"],offset))
             if not display_wait:
                 logging.info("Wait time : {}".format(time.time() - check_time))
             topic = processed_message["drone_id"] + "_processed"
@@ -195,7 +197,6 @@ while True:
             processors_table.insert_or_replace({"_id":"offset","offset":offset})
             
             # Set processor as available
-            # logging.info("Set {} as available".format(PROCESSOR_ID))
             processors_table.insert_or_replace({"_id":PROCESSOR_ID,"status":"available"})
 
             # Print stats every second

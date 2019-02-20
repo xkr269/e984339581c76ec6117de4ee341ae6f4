@@ -78,9 +78,6 @@ def main():
                 continue
             if not msg.error():
                 json_msg = json.loads(msg.value().decode('utf-8'))
-                # Wait for file to exist on the file system before sending it to the processor
-                while not os.path.isfile(json_msg["image"]):
-                    time.sleep(0.05)
                 received_messages += 1
                 # get the first available processor
                 processed = False
