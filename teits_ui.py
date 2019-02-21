@@ -125,6 +125,17 @@ def home():
   return render_template("teits_ui.html",active_drones=settings.ACTIVE_DRONES,zones=zones,display=display,drones=drones)
 
 
+
+# Video player
+@app.route('/intro')
+def intro():
+    # return render_template("intro.html")
+    return """
+    <a href="/">Go to Demo</a>
+    <iframe src="https://www.youtube.com/embed/iV40iGZzfYQ" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>
+    """
+
+
 # Gets move instructions from the web UI and push the new instruction to the posisions stream 
 # Each move instruction has a from zone, a destination (drop) zone and an action to be performed after the move.
 @app.route('/set_drone_position',methods=["POST"])
