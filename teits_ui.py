@@ -20,7 +20,10 @@ from confluent_kafka import Producer, Consumer, KafkaError
 import settings
 
 
-logging.basicConfig(filename=settings.LOG_FOLDER + "teits_ui.log" ,level=logging.INFO)
+logging.basicConfig(filename=settings.LOG_FOLDER + "teits_ui.log",
+                    level=logging.INFO,
+                    format='%(asctime)s :: %(levelname)s :: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 #### Kill previous instances

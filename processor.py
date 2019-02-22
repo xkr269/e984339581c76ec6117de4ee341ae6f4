@@ -35,7 +35,10 @@ import settings
 OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
 PROCESSOR_ID = "processor_" + str(int(time.time())) + str(randint(0,10000)) # Generate processor UID
 
-logging.basicConfig(filename=settings.LOG_FOLDER + "processor_{}.log".format(PROCESSOR_ID) ,level=logging.INFO)
+logging.basicConfig(filename=settings.LOG_FOLDER + "processor_{}.log".format(PROCESSOR_ID),
+                    level=logging.INFO,
+                    format='%(asctime)s :: %(levelname)s :: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 CLUSTER_NAME = settings.CLUSTER_NAME

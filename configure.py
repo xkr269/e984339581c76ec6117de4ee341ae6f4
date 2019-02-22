@@ -48,10 +48,11 @@ print("Recording stream created")
 print("initializing drones")
 os.system("rm -rf " + settings.DRONEDATA_TABLE)
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
+ZONES_TABLE = settings.ZONES_TABLE
 CLUSTER_IP = settings.CLUSTER_IP
 CLUSTER_NAME = settings.CLUSTER_NAME
 
-# Create database connection
+# Initialize databases
 connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
@@ -64,10 +65,15 @@ for DRONE_ID in ["drone_1","drone_2","drone_3"]:
                                        "position": {"zone":"home_base", "status":"landed","offset":0.0}})
 
 
+zones_table = connection.get_or_create_store(ZONES_TABLE)
+try:
+  # Create home_base if doesn't exist
+  zones_table.insert({"_id":"home_base","height":"10","left":"45","top":"45","width":"10","x":"0","y":"0"})
+except:
+  pass
 
 print("updating init file")
 os.system("sed -i 's/demo\.mapr\.com/{}/g' init.sh".format(CLUSTER_NAME))
 os.system("sed -i 's/demo\.mapr\.com/{}/g' clean.sh".format(CLUSTER_NAME))
-os.system("sed -i 's/demo\.mapr\.com/{}/g' nettoyage.sh".format(CLUSTER_NAME))
 
 print("Configuration complete, initialize environment variables with source init.sh then run the aplication using start.py")

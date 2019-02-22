@@ -44,7 +44,10 @@ import settings
 
 DRONE_ID = sys.argv[1]
 
-logging.basicConfig(filename=settings.LOG_FOLDER + "pilot_{}.log".format(DRONE_ID) ,level=logging.INFO)
+logging.basicConfig(filename=settings.LOG_FOLDER + "pilot_{}.log".format(DRONE_ID),
+                    level=logging.INFO,
+                    format='%(asctime)s :: %(levelname)s :: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 KILL_ALL = False

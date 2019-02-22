@@ -15,7 +15,10 @@ import av
 
 DRONE_ID = sys.argv[1]
 
-logging.basicConfig(filename=settings.LOG_FOLDER + "receiver_{}.log".format(DRONE_ID) ,level=logging.INFO)
+logging.basicConfig(filename=settings.LOG_FOLDER + "receiver_{}.log".format(DRONE_ID),
+                    level=logging.INFO,
+                    format='%(asctime)s :: %(levelname)s :: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 DATA_FOLDER = settings.DATA_FOLDER
