@@ -55,6 +55,7 @@ KILL_ALL = False
 # Remote mode sends data through a remote MaprDB buffer instead of writing directly to the FS
 REMOTE_MODE = settings.REMOTE_MODE
 
+
 logging.info("Remote mode : {}".format(REMOTE_MODE))
 
 
@@ -110,8 +111,23 @@ current_angle = 0.0
 time_tracker = {"min":1000,"max":0,"count":0,"avg":0}
 
 
-# Create database connection
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
+
+
+# Initialize databases
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)# Create database connection
+
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)

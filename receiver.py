@@ -25,9 +25,22 @@ DATA_FOLDER = settings.DATA_FOLDER
 BUFFER_TABLE = DATA_FOLDER + "{}_buffer".format(DRONE_ID)
 CLUSTER_IP = settings.CLUSTER_IP
 VIDEO_STREAM = settings.VIDEO_STREAM
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
 
-# Create database connection
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
+# Initialize databases
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)
+  
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 buffer_table = connection.get_or_create_store(BUFFER_TABLE)
 

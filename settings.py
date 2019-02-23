@@ -7,6 +7,12 @@ Settings files for TEITS demo project
 
 """
 
+# Authentication settings. 
+SECURE_MODE = False
+USERNAME = "mapr"
+PASSWORD = "mapr"
+PEM_FILE = "/opt/mapr/conf/ssl_truststore.pem"
+
 
 ACTIVE_DRONES = 1 # Number of pilot processes launched
 NUMBER_OF_PROCESSORS = 3 # Each processor can analyse 2 to 3 images / second

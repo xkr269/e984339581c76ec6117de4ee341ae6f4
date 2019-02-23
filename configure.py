@@ -51,9 +51,23 @@ DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
 CLUSTER_IP = settings.CLUSTER_IP
 CLUSTER_NAME = settings.CLUSTER_NAME
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
 
 # Initialize databases
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)
+
+
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 for DRONE_ID in ["drone_1","drone_2","drone_3"]:

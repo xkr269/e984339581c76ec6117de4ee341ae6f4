@@ -47,14 +47,24 @@ OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
 RECORDING_STREAM = settings.RECORDING_STREAM
-
-
 DISPLAY_STREAM_NAME = settings.DISPLAY_STREAM_NAME # "source" for original images, "processed" for processed image
 
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
 
+# Initialize databases
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)
 
-# Create database connection
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)

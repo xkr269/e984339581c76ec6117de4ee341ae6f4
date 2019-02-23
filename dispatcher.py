@@ -35,12 +35,22 @@ CLUSTER_IP = settings.CLUSTER_IP
 SOURCE_STREAM = settings.VIDEO_STREAM
 PROCESSORS_STREAM = settings.PROCESSORS_STREAM
 PROCESSORS_TABLE = settings.PROCESSORS_TABLE
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
 
-
-
-
-# Create database connection
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
+# Initialize databases
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)
+  
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 processors_table = connection.get_or_create_store(PROCESSORS_TABLE)
 

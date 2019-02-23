@@ -49,10 +49,22 @@ PROCESSORS_TABLE = settings.PROCESSORS_TABLE # Path for the table that stores pr
 PROCESSORS_STREAM = settings.PROCESSORS_STREAM # Output Stream path
 OUTPUT_STREAM = settings.VIDEO_STREAM
 ALLOWED_LAG = settings.ALLOWED_LAG
+SECURE_MODE = settings.SECURE_MODE
+username = settings.USERNAME
+password = settings.PASSWORD
+PEM_FILE = settings.PEM_FILE
 
-
-# Build Ojai MapRDB access
-connection_str = CLUSTER_IP + ":5678?auth=basic;user=mapr;password=mapr;ssl=false"
+# Initialize databases
+if SECURE_MODE:
+  connection_str = "{}:5678?auth=basic;" \
+                           "user={};"
+                           "password={};"
+                           "ssl=true;" \
+                           "sslCA={};" \
+                           "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
+else:
+  connection_str = "{}:5678?auth=basic;user={};password={};ssl=false".format(CLUSTER_IP,username,password)
+  
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 processors_table = connection.get_or_create_store(PROCESSORS_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
