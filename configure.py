@@ -59,8 +59,8 @@ PEM_FILE = settings.PEM_FILE
 # Initialize databases
 if SECURE_MODE:
   connection_str = "{}:5678?auth=basic;" \
-                           "user={};"
-                           "password={};"
+                           "user={};" \
+                           "password={};" \
                            "ssl=true;" \
                            "sslCA={};" \
                            "sslTargetNameOverride={}".format(CLUSTER_IP,username,password,PEM_FILE,CLUSTER_IP)
