@@ -35,19 +35,19 @@
         </div>
         <div class="row">
           <div class="col-3">Name</div>
-          <div class="col-9"><input type="text" id="zone_name"></div>
+          <div class="col-9"><input type="text" id="zone_name" onkeypress="return AvoidSpace(event)"></div>
           </div>
         <div class="row zone_settings">
           <div class="col-3">Height %</div>
-          <div class="col-3"><input type="text" id="zone_height"></div>
+          <div class="col-3"><input type="text" id="zone_height" onkeypress="return NumbersOnly(event)"></div>
           <div class="col-3">Width %</div>
-          <div class="col-3"><input type="text" id="zone_width"></div>
+          <div class="col-3"><input type="text" id="zone_width" onkeypress="return NumbersOnly(event)"></div>
         </div>
         <div class="row zone_settings">
           <div class="col-3">Top %</div>
-          <div class="col-3"><input type="text" id="zone_top"></div>
+          <div class="col-3"><input type="text" id="zone_top" onkeypress="return NumbersOnly(event)"></div>
           <div class="col-3">Left %</div>
-          <div class="col-3"><input type="text" id="zone_left"></div>
+          <div class="col-3"><input type="text" id="zone_left" onkeypress="return NumbersOnly(event)"></div>
         </div>
         <hr>
         <div class="row">
@@ -59,9 +59,9 @@
         </div>
         <div class="row zone_settings">
           <div class="col-3">X m</div>
-          <div class="col-3"><input type="text" id="zone_x"></div>
+          <div class="col-3"><input type="text" id="zone_x" onkeypress="return NumbersOnly(event)"></div>
           <div class="col-3">Y m</div>
-          <div class="col-3"><input type="text" id="zone_y"></div>
+          <div class="col-3"><input type="text" id="zone_y" onkeypress="return NumbersOnly(event)"></div>
         </div>
       </div>
     </div>

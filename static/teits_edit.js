@@ -102,3 +102,13 @@ function set_zone_position(zone_id,top,left){
 $(function(){
     $('.drag').draggable({revert:"invalid",revertDuration: 300}); // appel du plugin
 });
+
+function AvoidSpace(event) {
+    var k = event ? event.which : window.event.keyCode;
+    if (k == 32) return false;
+}
+
+function NumbersOnly(event) {
+    var k = event ? event.which : window.event.keyCode;
+    if (k < 45 || k > 57 || k == 47) return false;
+}

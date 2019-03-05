@@ -24,7 +24,6 @@ import sys
 
 #### Kill previous instances
 current_pid = os.getpid()
-print(current_pid)
 all_pids = os.popen("ps aux | grep 'start.py' | awk '{print $2}'").read().split('\n')[:-1]
 for pid in all_pids:
     if int(pid) != current_pid:

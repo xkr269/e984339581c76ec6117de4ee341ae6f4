@@ -3,7 +3,7 @@ The Eye In The Sky
 Real time image processing from remote controlled drones
 
 <hr>
-1/ Overview
+<h3>1/ Overview</h3>
 
 This demo shows how MapR simplifies processing of real time events at scale.
 It displays analytics about the number of people counted in real time from video streams.
@@ -12,7 +12,7 @@ Drones are controlled via WiFi.
 
 
 <hr>
-2/ Architecture
+<h3>2/ Architecture</h3>
 
 The architecture can be split in 3 main functions :
 - ingestion of the video streams
@@ -47,7 +47,7 @@ This script manages the web interface:
 All the application settings are defined in the "settingss.py" file.
 
 <hr>
-3/ Recommended infrastructure
+<h3>3/ Recommended infrastructure</h3>
 
 In "live" mode, this demo is typically run on a laptop using VMs
 In "video" mode, it can be run anywhere.
@@ -68,7 +68,7 @@ One NIC connected to the host network
 Two NICs : one connected to the cluster, one bridged to a WiFi interface to connect the drone.
 
 <hr>
-4/ Installation
+<h3>4/ Installation</h3>
 
 Run as root !
 
@@ -101,7 +101,7 @@ Installation steps:
 - source init.sh
 
 <hr>
-5/ Run the application
+<h3>5/ Run the application</h3>
 
 5-1/ Launch the main application on the cluster
 python start.py
@@ -116,3 +116,7 @@ These zones have to be created before running the demo :
 
 5-3/ Connect each edge VM to a drone and launch the pilot
 python pilot.py drone_N (ie. python pilot.py drone_1)
+
+<hr>
+the clean.sh script is recommended to run if you have to relaunch the script.
+it kills all previous instances. 
