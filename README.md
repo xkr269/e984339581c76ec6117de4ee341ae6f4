@@ -3,7 +3,6 @@ The Eye In The Sky
 Real time image processing from remote controlled drones
 
 <hr>
-----------------------------------------------------------------------
 1/ Overview
 
 This demo shows how MapR simplifies processing of real time events at scale.
@@ -12,6 +11,7 @@ It displays analytics about the number of people counted in real time from video
 Drones are controlled via WiFi.
 
 
+<hr>
 2/ Architecture
 
 The architecture can be split in 3 main functions :
@@ -46,7 +46,7 @@ This script manages the web interface:
 
 All the application settings are defined in the "settingss.py" file.
 
-
+<hr>
 3/ Recommended infrastructure
 
 In "live" mode, this demo is typically run on a laptop using VMs
@@ -67,38 +67,52 @@ One NIC connected to the host network
 10GB disk
 Two NICs : one connected to the cluster, one bridged to a WiFi interface to connect the drone.
 
------------------------------------------------------------------------------
+<hr>
+4/ Installation
 
+Run as root !
 
+4-1/ Central cluster
 
-run as root !
+Prerequisites:
+- MapR 6.1 cluster with DB and streams
 
-
-Prerequisites :
-
+Installation steps:
 - go to your mapr FS root
 - git clone https://github.com/xkr269/e984339581c76ec6117de4ee341ae6f4.git
 - mv e984339581c76ec6117de4ee341ae6f4 teits
 - cd teits
 - ./setup.sh
-- edit init.sh to update the cluster name
+- python configure.py
 - source init.sh
 
 Configure settings :
 - DRONE_MODE :
     - live : use with real drones. Run the pilot.py script on the laptop connected to the drone
     - video : use without drones. Import the videos you want to stream into the data/recording folder as {{zone_name}}.mp4
-    - replay : you can record video from live drones using the recording application (python recording.py)
-
-Launch project :
-python configure.py on the main cluster (maprcli should be available)
-
-python start.py for main program
-
-Access the zone editor : {{cluster_ip}}/edit
-create and position the zones for the drones
-At least a home_base zone should exist.
-Typical position is x=0 y=0.
 
 
-In live mode, pilot.py has to run on the computer connected to the drone 
+4-1/ Edge node
+Prerequisistes:
+- MapR client configured to access the main cluster
+
+Installation steps:
+- go to the project folder using global namespace
+- source init.sh
+
+<hr>
+5/ Run the application
+
+5-1/ Launch the main application on the cluster
+python start.py
+
+
+5-2/ Initial configuration of the drone environment
+your drones will be able to move around based on your instructions.
+Their movements are restricted to pre-defined zones.
+These zones have to be created before running the demo :
+- Access the zone editor : {{cluster_ip}}/edit
+- Create and position the zones for the drones
+
+5-3/ Connect each edge VM to a drone and launch the pilot
+python pilot.py drone_N (ie. python pilot.py drone_1)
