@@ -180,51 +180,54 @@ def get_drone_video(drone):
         while True:
             try:
                 i = 0
-                for frame in container.decode(video=0):
-                    # skip first 400 frames
-                    i = i + 1
-                    if i < 300:
-                        continue
-                    received_frames += 1
-                    current_time = time.time()
-                    if current_time > (last_frame_time + float(1/STREAM_FPS)):
-                        start_processing_time = time.time()
-                        index = frame.index
-                        new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
-                        try:
-                            if REMOTE_MODE:
-                                memfile = BytesIO()
-                                frame.to_image().save(memfile,format="JPEG",width=480,height=270)
-                                image_bytes = base64.b64encode(memfile.getvalue())
-                                json_dict = {"_id":"{}".format(index),
-                                            "image_name":new_image,
-                                            "image_bytes":image_bytes}
-                                buffer_table.insert_or_replace(json_dict)
-                            else:
-                                frame.to_image().save(new_image)
-                                video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
-                                                                                         "index":index,
-                                                                                         "image":new_image}))
-                        except Exception as ex:
-                            logging.exception("image save failed")
+                try:
+                    for frame in container.decode(video=0):
+                        # skip first 400 frames
+                        i = i + 1
+                        if i < 300:
+                            continue
+                        received_frames += 1
+                        current_time = time.time()
+                        if current_time > (last_frame_time + float(1/STREAM_FPS)):
+                            start_processing_time = time.time()
+                            index = frame.index
+                            new_image = IMAGE_FOLDER + "frame-{}.jpg".format(index)
+                            try:
+                                if REMOTE_MODE:
+                                    memfile = BytesIO()
+                                    frame.to_image().save(memfile,format="JPEG",width=480,height=270)
+                                    image_bytes = base64.b64encode(memfile.getvalue())
+                                    json_dict = {"_id":"{}".format(index),
+                                                "image_name":new_image,
+                                                "image_bytes":image_bytes}
+                                    buffer_table.insert_or_replace(json_dict)
+                                else:
+                                    frame.to_image().save(new_image)
+                                    video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
+                                                                                             "index":index,
+                                                                                             "image":new_image}))
+                            except Exception as ex:
+                                logging.exception("image save failed")
 
-                        sent_frames += 1
-                        last_frame_time = time.time()
-                        duration = last_frame_time - start_processing_time
-                        time_tracker["min"] = min(time_tracker["min"],duration)
-                        time_tracker["max"] = max(time_tracker["max"],duration)
-                        time_tracker["count"] += 1
-                        time_tracker["avg"] = (time_tracker["avg"] * (time_tracker["count"] - 1) + duration) / time_tracker["count"]
+                            sent_frames += 1
+                            last_frame_time = time.time()
+                            duration = last_frame_time - start_processing_time
+                            time_tracker["min"] = min(time_tracker["min"],duration)
+                            time_tracker["max"] = max(time_tracker["max"],duration)
+                            time_tracker["count"] += 1
+                            time_tracker["avg"] = (time_tracker["avg"] * (time_tracker["count"] - 1) + duration) / time_tracker["count"]
 
 
-                    # Print stats every second
-                    elapsed_time = time.time() - start_time
-                    if int(elapsed_time) != current_sec:
-                        logging.info("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
-                        logging.info("Time tracker : {} ".format(time_tracker))
-                        received_frames = 0
-                        sent_frames = 0
-                        current_sec = int(elapsed_time)
+                        # Print stats every second
+                        elapsed_time = time.time() - start_time
+                        if int(elapsed_time) != current_sec:
+                            logging.info("Elapsed : {} s, received {} fps , sent {} fps".format(int(elapsed_time),received_frames,sent_frames))
+                            logging.info("Time tracker : {} ".format(time_tracker))
+                            received_frames = 0
+                            sent_frames = 0
+                            current_sec = int(elapsed_time)
+                except:
+                    pass
             except:
                 logging.exception("fails")
 
