@@ -114,8 +114,6 @@ def people_detection(image):
 def face_detection(image):
 
     global faceCascade
-    image_array = numpy.array(Image.open(message["image"]))
-    image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = faceCascade.detectMultiScale(
         gray,
@@ -143,6 +141,7 @@ def processing_function(message):
     image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
     image = imutils.resize(image, width=min(400, image.shape[1]))
     (processed_image,count) = people_detection(image) 
+    # (processed_image,count) = face_detection(image) 
 
     message["count"] = count
 

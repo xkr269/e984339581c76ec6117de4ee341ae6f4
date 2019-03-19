@@ -101,6 +101,7 @@ VIDEO_STREAM = settings.VIDEO_STREAM
 POSITIONS_STREAM = settings.POSITIONS_STREAM
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
+CONTROLS_TABLE = settings.CONTROLS_TABLE
 RECORDING_FOLDER = settings.RECORDING_FOLDER
 
 BUFFER_TABLE = DATA_FOLDER + "{}_buffer".format(DRONE_ID)
@@ -130,6 +131,8 @@ else:
 
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
+
+# initialize drone data
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
 dronedata_table.insert_or_replace({"_id":DRONE_ID,
                                    "status":"ready",
@@ -140,6 +143,12 @@ dronedata_table.insert_or_replace({"_id":DRONE_ID,
                                    "connection_status":"disconnected",
                                    "position": {"zone":"home_base", "status":"landed","offset":0.0}})
 
+# initialize drone controls
+controls_table = connection.get_or_create_store(CONTROLS_TABLE)
+controls_table.insert_or_replace({"_id":DRONE_ID,
+                                   "pressed_keys":[]})
+
+
 buffer_table = connection.get_or_create_store(BUFFER_TABLE)
 
 # test if folders exist and create them if needed
@@ -149,6 +158,79 @@ if not os.path.exists(IMAGE_FOLDER):
 # create sreams if needed
 check_stream(VIDEO_STREAM)
 check_stream(POSITIONS_STREAM)
+
+
+
+
+
+#######################    INTERACTIVE DRONE CONTROL    ##################
+# Function polls an instruction DB to get the current control keys and send the commands to the drone
+
+controls = {
+    'q': lambda drone, speed: drone.left(speed),
+    'd': lambda drone, speed: drone.right(speed),
+    'z': lambda drone, speed: drone.forward(speed),
+    's': lambda drone, speed: drone.backward(speed),
+    'f': lambda drone, speed: drone.flip_back(),
+    # arrow keys for fast turns and altitude adjustments
+    'ArrowLeft': lambda drone, speed: drone.counter_clockwise(speed),
+    'ArrowRight': lambda drone, speed: drone.clockwise(speed),
+    'ArrowUp': lambda drone, speed: drone.up(speed),
+    'ArrowDown': lambda drone, speed: drone.down(speed),
+    'Tab': lambda drone, speed: drone.takeoff(),
+    'Backspace': lambda drone, speed: drone.land(),
+}
+
+
+def interactive_control(drone):
+    print("interactive control thread started")
+    speed = 100
+    try:
+        prev_pk = []
+        while True:
+            time.sleep(0.05)
+            pressed_keys = controls_table.find_by_id(DRONE_ID)["pressed_keys"]
+            if set(pressed_keys) != set(prev_pk):
+                keys_up = []
+                for key in prev_pk:
+                    if not key in pressed_keys:
+                        keys_up.append(key)
+                keys_down = []
+                for key in pressed_keys:
+                    if not key in prev_pk:
+                        keys_down.append(key)
+                prev_pk = pressed_keys
+                print("Pressed keys : {}".format(pressed_keys))
+                print("Down : {}".format(keys_down))
+                print("Up : {}".format(keys_up))
+
+                for key in keys_up:
+                    controls[key](drone, 0)
+                for key in keys_down:
+                    controls[key](drone,speed)
+
+            # if pressed_keys in controls:
+            #     key_handler = controls[keyname]
+            #     if type(key_handler) == str:
+            #         getattr(drone, key_handler)(speed)
+            #     else:
+            #         key_handler(drone, speed)
+
+            # elif e.type == pygame.locals.KEYUP:
+            #     print('-' + pygame.key.name(e.key))
+            #     keyname = pygame.key.name(e.key)
+            #     if keyname in controls:
+            #         key_handler = controls[keyname]
+            #         if type(key_handler) == str:
+            #             getattr(drone, key_handler)(0)
+            #         else:
+            #             key_handler(drone, 0)
+    except Exception as ex:
+        logging.exception("interactive control failed")
+
+
+
+
 
 
 #######################    VIDEO PROCESSING    ##################
@@ -181,6 +263,7 @@ def get_drone_video(drone):
             try:
                 i = 0
                 try:
+                    logging.info("start decode")
                     for frame in container.decode(video=0):
                         # skip first 400 frames
                         i = i + 1
@@ -202,6 +285,7 @@ def get_drone_video(drone):
                                                 "image_bytes":image_bytes}
                                     buffer_table.insert_or_replace(json_dict)
                                 else:
+                                    logging.info("saving {}".format(index))
                                     frame.to_image().save(new_image)
                                     video_producer.produce(DRONE_ID + "_source", json.dumps({"drone_id":DRONE_ID,
                                                                                              "index":index,
@@ -227,6 +311,9 @@ def get_drone_video(drone):
                             sent_frames = 0
                             current_sec = int(elapsed_time)
                 except:
+                    time.sleep(2)
+                    # container = av.open(drone.get_video_stream())
+                    i=0
                     pass
             except:
                 logging.exception("fails")
@@ -370,17 +457,17 @@ def move_to_zone(drone,start_zone,drop_zone):
 
         if DIRECTIONAL_MODE == "LINEAR" :
             if y > 0:
-                drone.forward(y)
+                drone.forward_d(y)
             elif y < 0:
-                drone.backward(-y)
+                drone.backward_d(-y)
             if y != 0:
                 logging.info("Sleep {}".format(abs(FORWARD_COEF*y)))
                 time.sleep(max(1,abs(FORWARD_COEF*y)))
 
             if x > 0:
-                drone.right(x)
+                drone.right_d(x)
             elif x < 0:
-                drone.left(-x)
+                drone.left_d(-x)
             if x != 0:
                 logging.info("Sleep {}".format(abs(FORWARD_COEF*x)))
                 time.sleep(max(1,abs(FORWARD_COEF*x)))
@@ -402,22 +489,22 @@ def move_to_zone(drone,start_zone,drop_zone):
                 # calcul offset et deplacement
                 if cadran in [-1,0]:
                     offset = angle
-                    move = drone.forward
+                    move = drone.forward_d
                 elif cadran in [1,2]:
                     offset = angle - 90
-                    move = drone.right
+                    move = drone.right_d
                 elif cadran in [-4,3]:
                     offset = (angle + 90) % 180 - 90
-                    move = drone.backward
+                    move = drone.backward_d
                 elif cadran in [-2,-3]:
                     offset = angle + 90
-                    move = drone.left
+                    move = drone.left_d
 
                 logging.info("offset : {}".format(offset))
                 logging.info("move : {}".format(move))
 
             elif DIRECTIONAL_MODE == "FORWARD":
-                move = drone.forward
+                move = drone.forward_d
                 offset = angle 
                 logging.info("forward mode, offset : {}".format(offset))
 
@@ -524,6 +611,9 @@ def main():
     videoThread.start()
 
 
+    livePilotThread = threading.Thread(target=interactive_control,args=[drone])
+    livePilotThread.start()
+
     start_time = time.time()
     consumer_group = DRONE_ID + str(time.time())
     positions_consumer = Consumer({'group.id': consumer_group,'default.topic.config': {'auto.offset.reset':'latest'}})
@@ -552,10 +642,14 @@ def main():
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
                         if DRONE_MODE == "live" and not NO_FLIGHT:
                             drone.takeoff()
+                            time.sleep(8)
+                            drone.up(1)
                         mutation = {"$put":{"position.status":"flying"}}
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
                         mutation = {"$put":{"status":"waiting"}}
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+
+
 
                     if action == "land":
                         logging.info("....................................................  Land")
@@ -571,6 +665,91 @@ def main():
                         dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
 
 
+                    if action == "up":
+                        logging.info("....................................................  Up")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"up"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.up(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+                    if action == "down":
+                        logging.info("....................................................  Up")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"down"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.down(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+                    if action == "left":
+                        logging.info("....................................................  Up")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"left"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.left(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+                    if action == "right":
+                        logging.info("....................................................  Right")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"right"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.right(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+
+                    if action == "forward":
+                        logging.info("....................................................  forward")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"forward"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.forward(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+
+                    if action == "backward":
+                        logging.info("....................................................  backward")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"backward"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.backward(0.5)
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)  
+
+                    if action == "flip":
+                        logging.info("....................................................  flip")
+                        mutation = {"$put":{"status":"busy"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"last_command":"flip"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        if DRONE_MODE == "live" and not NO_FLIGHT:
+                            drone.flip_back()
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation)
+                        mutation = {"$put":{"status":"waiting"}}
+                        dronedata_table.update(_id=DRONE_ID,mutation=mutation) 
                 else:
                     logging.info(".....................................................  Moving ")
                     from_zone = dronedata_table.find_by_id(DRONE_ID)["position"]["zone"]

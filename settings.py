@@ -57,7 +57,8 @@ LOG_FOLDER = ROOT_PATH + "logs/" # Folder to store the data
 
 
 # Table names
-ZONES_TABLE = DATA_FOLDER + 'zones_table' # Table for storing informations about 
+ZONES_TABLE = DATA_FOLDER + 'zones_table' # Table for storing informations about predefined zones
+CONTROLS_TABLE = DATA_FOLDER + 'controls_table' # Table for storing informations about interactive flight instructions
 DRONEDATA_TABLE = DATA_FOLDER + 'dronedata_table'  # Table for storing informations about each drone
 PROCESSORS_TABLE = DATA_FOLDER + 'processors_table'  # Table for storing info about processors
 RECORDING_TABLE = DATA_FOLDER + 'recording_table' # Table to excahnge informations while recording

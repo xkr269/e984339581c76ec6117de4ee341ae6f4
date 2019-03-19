@@ -41,13 +41,16 @@ CLUSTER_IP = settings.CLUSTER_IP
 PROJECT_FOLDER = settings.PROJECT_FOLDER
 ROOT_PATH = CLUSTER_NAME + settings.PROJECT_FOLDER
 RECORDING_FOLDER = settings.RECORDING_FOLDER
-VIDEO_STREAM = settings.VIDEO_STREAM
-POSITIONS_STREAM = settings.POSITIONS_STREAM
-OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
+
 DRONEDATA_TABLE = settings.DRONEDATA_TABLE
 ZONES_TABLE = settings.ZONES_TABLE
+CONTROLS_TABLE = settings.CONTROLS_TABLE
+
+VIDEO_STREAM = settings.VIDEO_STREAM
+POSITIONS_STREAM = settings.POSITIONS_STREAM
 RECORDING_STREAM = settings.RECORDING_STREAM
-DISPLAY_STREAM_NAME = settings.DISPLAY_STREAM_NAME # "source" for original images, "processed" for processed image
+OFFSET_RESET_MODE = settings.OFFSET_RESET_MODE
+DISPLAY_STREAM_NAME = settings.DISPLAY_STREAM_NAME
 
 SECURE_MODE = settings.SECURE_MODE
 username = settings.USERNAME
@@ -68,6 +71,7 @@ else:
 connection = ConnectionFactory().get_connection(connection_str=connection_str)
 zones_table = connection.get_or_create_store(ZONES_TABLE)
 dronedata_table = connection.get_or_create_store(DRONEDATA_TABLE)
+controls_table = connection.get_or_create_store(CONTROLS_TABLE)
 
 # Positions stream. Each drone has its own topic
 positions_producer = Producer({'streams.producer.default.stream': POSITIONS_STREAM})
@@ -149,8 +153,66 @@ def intro():
     """
 
 
+
+# Streams images from the video stream
+@app.route('/video_stream/<drone_id>')
+def video_stream(drone_id):
+  return Response(stream_video(drone_id), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+# Changes DISPLAY stream
+@app.route('/set_video_stream',methods=["POST"])
+def set_video_stream():
+  global DISPLAY_STREAM_NAME
+  DISPLAY_STREAM_NAME = request.form["stream"]
+  return "Display stream changed to {}".format(DISPLAY_STREAM_NAME)
+
+
+
+# Resets drone position to home_base:landed in the database and the positions stream
+@app.route('/reset_position',methods=["POST"])
+def reset_position():
+    drone_id = request.form["drone_id"]
+    dronedata_table.update(_id=drone_id,mutation={"$put": {'position.zone': "home_base"}})
+    dronedata_table.update(_id=drone_id,mutation={"$put": {'position.status': "landed"}})
+    return "Reset position for {}".format(drone_id)
+
+
+###################################
+#####         FLIGHT          #####
+###################################
+
+
+
+# Live instructions
+
+allowed_keys = ['q','d','z','s','f','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Backspace','Tab']
+pressed_keys = []
+
+@app.route('/keydown',methods=["POST"])
+def keydown():
+  key = request.form['key']
+  if key in allowed_keys and key not in pressed_keys:
+    pressed_keys.append(key)
+    doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
+    controls_table.insert_or_replace(doc)
+  return json.dumps(pressed_keys)
+
+@app.route('/keyup',methods=["POST"])
+def keyup():
+  key = request.form['key']
+  if key in allowed_keys:
+    pressed_keys.remove(key)
+    doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
+    controls_table.insert_or_replace(doc)
+  return json.dumps(pressed_keys)
+
+
+
 # Gets move instructions from the web UI and push the new instruction to the posisions stream 
 # Each move instruction has a from zone, a destination (drop) zone and an action to be performed after the move.
+
 @app.route('/set_drone_position',methods=["POST"])
 def set_drone_position():
   drone_id = request.form["drone_id"]
@@ -187,7 +249,7 @@ def set_drone_position():
   return "{} moved from zone {} to zone {} then {}".format(drone_id,from_zone,drop_zone,action)
 
 
-
+# Takeoff
 @app.route('/takeoff',methods=["POST"])
 def takeoff():
   drone_id = request.form["drone_id"]
@@ -196,7 +258,7 @@ def takeoff():
   logging.info("New instruction : {}".format(message))
   return "Takeoff sent for {}".format(drone_id)
 
-# Force landing
+# Landing
 @app.route('/land',methods=["POST"])
 def land():
   drone_id = request.form["drone_id"]
@@ -206,7 +268,74 @@ def land():
   return "Landing order sent for {}".format(drone_id)
 
 
-# Force landing~for all drones
+# # Up .5m
+# @app.route('/up',methods=["POST"])
+# def up():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"up"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "Up order sent for {}".format(drone_id)
+
+# # Down .5m
+# @app.route('/down',methods=["POST"])
+# def down():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"down"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "Down order sent for {}".format(drone_id)
+
+# # Down .5m
+# @app.route('/left',methods=["POST"])
+# def left():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"left"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "left order sent for {}".format(drone_id)
+
+
+
+# # Down .5m
+# @app.route('/right',methods=["POST"])
+# def right():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"right"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "right order sent for {}".format(drone_id)
+
+# # Down .5m
+# @app.route('/forward',methods=["POST"])
+# def forward():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"forward"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "forward order sent for {}".format(drone_id)
+
+# # Down .5m
+# @app.route('/backward',methods=["POST"])
+# def backward():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"backward"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "backward order sent for {}".format(drone_id)
+
+
+# @app.route('/flip',methods=["POST"])
+# def flip():
+#   drone_id = request.form["drone_id"]
+#   message = {"drone_id":drone_id,"action":"flip"}
+#   positions_producer.produce(drone_id, json.dumps(message))
+#   logging.info("New instruction : {}".format(message))
+#   return "flip order sent for {}".format(drone_id)
+
+
+
+# Force landing for all drones
 @app.route('/emergency_land',methods=["POST"])
 def emergency_land():
   for i in range(settings.ACTIVE_DRONES):
@@ -251,6 +380,10 @@ def move_drone():
 
 
 
+###################################
+#####       FLIGHT DATA       #####
+###################################
+
 
 # Returns current drone position ### unused
 @app.route('/get_position',methods=["POST"])
@@ -290,12 +423,6 @@ def get_next_waypoint():
   else :
     new_index = current_index + 1
   return waypoints[new_index]
-
-
-# Streams images from the video stream
-@app.route('/video_stream/<drone_id>')
-def video_stream(drone_id):
-  return Response(stream_video(drone_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 
@@ -352,14 +479,6 @@ def get_count():
 
 
 
-# Changes DISPLAY stream
-@app.route('/set_video_stream',methods=["POST"])
-def set_video_stream():
-  global DISPLAY_STREAM_NAME
-  DISPLAY_STREAM_NAME = request.form["stream"]
-  return "Display stream changed to {}".format(DISPLAY_STREAM_NAME)
-
-
 # Returns drone current connection status
 @app.route('/get_connection_status',methods=["POST"])
 def get_connection_status():
@@ -368,18 +487,6 @@ def get_connection_status():
 
 
 
-
-
-
-
-# Resets drone position to home_base:landed in the database and the positions stream
-@app.route('/reset_position',methods=["POST"])
-def reset_position():
-    drone_id = request.form["drone_id"]
-    dronedata_table.update(_id=drone_id,mutation={"$put": {'position.zone': "home_base"}})
-    message = {"drone_id":drone_id,"drop_zone":"home_base","action":"land"}
-    positions_producer.produce(drone_id, json.dumps(message))
-    return "Reset and landing order sent for {}".format(drone_id)
 
 
 

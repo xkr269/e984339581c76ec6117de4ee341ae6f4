@@ -275,13 +275,13 @@ class Tello(object):
         pkt.fixup()
         return self.send_packet(pkt)
 # 
-    def forward(self,distance): # in meters
+    def forward_d(self,distance): # in meters
         distance = int(distance * 100)
         msg = "forward " + str(distance)
         print(msg)
         return self.custom_command(msg)
 # 
-    def backward(self,distance): # in meters
+    def backward_d(self,distance): # in meters
         distance = int(distance * 100)
         msg = "back " + str(distance)
         print(msg)
@@ -296,72 +296,72 @@ class Tello(object):
             msg = "ccw " + str(abs(angle))
             return self.custom_command(msg)
 # 
-    def up(self,distance): # in meter
+    def up_d(self,distance): # in meter
         distance = int(distance * 100)
         msg = "up " + str(distance)
         return self.custom_command(msg)
 # 
-    def down(self,distance): # in meter
+    def down_d(self,distance): # in meter
         distance = int(distance * 100)
         msg = "up " + str(distance)
         return self.custom_command(msg)
 # 
-    def left(self,distance): # in meter
+    def left_d(self,distance): # in meter
         distance = int(distance * 100)
         msg = "left " + str(distance)
         return self.custom_command(msg)
 # 
-    def right(self,distance): # in meter
+    def right_d(self,distance): # in meter
         distance = int(distance * 100)
         msg = "right " + str(distance)
         return self.custom_command(msg)
 
 
-    # def up(self, val):
-    #     """Up tells the drone to ascend. Pass in an int from 0-100."""
-    #     log.info('up(val=%d)' % val)
-    #     self.left_y = val / 100.0
+    def up(self, val):
+        """Up tells the drone to ascend. Pass in an int from 0-100."""
+        log.info('up(val=%d)' % val)
+        self.left_y = val / 100.0
 
-    # def down(self, val):
-    #     """Down tells the drone to descend. Pass in an int from 0-100."""
-    #     log.info('down(val=%d)' % val)
-    #     self.left_y = val / 100.0 * -1
+    def down(self, val):
+        """Down tells the drone to descend. Pass in an int from 0-100."""
+        log.info('down(val=%d)' % val)
+        self.left_y = val / 100.0 * -1
 
-    # def forward(self, val):
-    #     """Forward tells the drone to go forward. Pass in an int from 0-100."""
-    #     log.info('forward(val=%d)' % val)
-    #     self.right_y = val / 100.0
+    def forward(self, val):
+        """Forward tells the drone to go forward. Pass in an int from 0-100."""
+        log.info('forward(val=%d)' % val)
+        self.right_y = val / 100.0
 
-    # def backward(self, val):
-    #     """Backward tells the drone to go in reverse. Pass in an int from 0-100."""
-    #     log.info('backward(val=%d)' % val)
-    #     self.right_y = val / 100.0 * -1
+    def backward(self, val):
+        """Backward tells the drone to go in reverse. Pass in an int from 0-100."""
+        log.info('backward(val=%d)' % val)
+        self.right_y = val / 100.0 * -1
 
-    # def right(self, val):
-    #     """Right tells the drone to go right. Pass in an int from 0-100."""
-    #     log.info('right(val=%d)' % val)
-    #     self.right_x = val / 100.0
+    def right(self, val):
+        """Right tells the drone to go right. Pass in an int from 0-100."""
+        log.info('right(val=%d)' % val)
+        self.right_x = val / 100.0
 
-    # def left(self, val):
-    #     """Left tells the drone to go left. Pass in an int from 0-100."""
-    #     log.info('left(val=%d)' % val)
-    #     self.right_x = val / 100.0 * -1
+    def left(self, val):
+        """Left tells the drone to go left. Pass in an int from 0-100."""
+        log.info('left(val=%d)' % val)
+        self.right_x = val / 100.0 * -1
 
-    # def clockwise(self, val):
-    #     """
-    #     Clockwise tells the drone to rotate in a clockwise direction.
-    #     Pass in an int from 0-100.
-    #     """
-    #     log.info('clockwise(val=%d)' % val)
-    #     self.left_x = val / 100.0
+    def clockwise(self, val):
+        """
+        Clockwise tells the drone to rotate in a clockwise direction.
+        Pass in an int from 0-100.
+        """
+        log.info('clockwise(val=%d)' % val)
+        self.left_x = val / 100.0
 
-    # def counter_clockwise(self, val):
-    #     """
-    #     CounterClockwise tells the drone to rotate in a counter-clockwise direction.
-    #     Pass in an int from 0-100.
-    #     """
-    #     log.info('counter_clockwise(val=%d)' % val)
-    #     self.left_x = val / 100.0 * -1
+    def counter_clockwise(self, val):
+        """
+        CounterClockwise tells the drone to rotate in a counter-clockwise direction.
+        Pass in an int from 0-100.
+        """
+        log.info('counter_clockwise(val=%d)' % val)
+        self.left_x = val / 100.0 * -1
 
     # def flip_forward(self):
     #     """flip_forward tells the drone to perform a forwards flip"""
@@ -371,13 +371,13 @@ class Tello(object):
     #     pkt.fixup()
     #     return self.send_packet(pkt)
 
-    # def flip_back(self):
-    #     """flip_back tells the drone to perform a backwards flip"""
-    #     log.info('flip_back (cmd=0x%02x seq=0x%04x)' % (FLIP_CMD, self.pkt_seq_num))
-    #     pkt = Packet(FLIP_CMD, 0x70)
-    #     pkt.add_byte(FlipBack)
-    #     pkt.fixup()
-    #     return self.send_packet(pkt)
+    def flip_back(self):
+        """flip_back tells the drone to perform a backwards flip"""
+        log.info('flip_back (cmd=0x%02x seq=0x%04x)' % (FLIP_CMD, self.pkt_seq_num))
+        pkt = Packet(FLIP_CMD, 0x70)
+        pkt.add_byte(FlipBack)
+        pkt.fixup()
+        return self.send_packet(pkt)
 
     # def flip_right(self):
     #     """flip_right tells the drone to perform a right flip"""

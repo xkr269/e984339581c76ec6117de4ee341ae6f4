@@ -1,17 +1,19 @@
 // js file for TEITS main UI
 
 
-var DISPLAY_COUNT_TIMER = 1000
-var DISPLAY_SPEED_TIMER = 2000
-var DISPLAY_CONNECTION_STATUS_TIMER = 2000
-var DISPLAY_BATTERY_TIMER = 2000
-var PATROL_TIMER = 5000
-var GRAPH_TIMER = 2000 
-var graph_color = "#6CFC5F"
+var DISPLAY_COUNT_TIMER = 1000;
+var DISPLAY_SPEED_TIMER = 2000;
+var DISPLAY_CONNECTION_STATUS_TIMER = 2000;
+var DISPLAY_BATTERY_TIMER = 2000;
+var PATROL_TIMER = 5000;
+var GRAPH_TIMER = 2000 ;
+var graph_color = "#6CFC5F";
 
-var DRONE_1_READY = true
-var DRONE_2_READY = true
-var DRONE_3_READY = true
+var DRONE_1_READY = true;
+var DRONE_2_READY = true;
+var DRONE_3_READY = true;
+
+var ACTIVE_DRONE = "drone_1";
 
 
 
@@ -22,6 +24,7 @@ $(function(){
 });
 
 
+/* Drone control functions */
 
 function takeoff(drone_id){
     console.log("Taking off " + drone_id)
@@ -35,6 +38,21 @@ function takeoff(drone_id){
             }
         }); 
 }
+
+function land(drone_id){
+    console.log("Landing " + drone_id)
+    $.ajax({
+            url: 'land',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log("drone " + drone_id + " takeoff success :");
+                console.log(data)
+            }
+        });   
+}
+
+
 
 function move_drone(drone_id,drop_zone){
     console.log("Send moving instructions for " + drone_id + " to " + drop_zone)
@@ -90,6 +108,37 @@ function move_sprite_to_zone(drone_id,zone_id){
         });
     }
 
+
+function move_sprite(drone_id,command){
+    console.log("Moving " + drone_id + " " +command + " on UI");
+    var drone_div = $('#' + drone_id);
+    var drone_position = drone_div.position();
+    var top = drone_position.top ;
+    var left = drone_position.left ;
+    if (command=="right"){
+        left = left - drone_div.width();
+    }
+    if (command=="left"){
+        left = left + drone_div.width();
+    }
+    if (command=="forward"){
+        top = top - drone_div.height();
+    }
+    if (command=="backward"){
+        top = top + drone_div.height();
+    }
+    
+    drone_div.animate({
+        top : top,
+        left: left
+        }, 1000,function(){
+            console.log("move complete for " + drone_id)
+            if(drone_id == "drone_1"){DRONE_1_READY = true};
+            if(drone_id == "drone_2"){DRONE_2_READY = true};
+            if(drone_id == "drone_3"){DRONE_3_READY = true};
+        });
+    }
+
 $("#back_home_button").click(function(){
     $(".drone").each(function(){
         console.log("Stop patrolling");
@@ -117,11 +166,47 @@ $("#land_button").click(function(){
     })
 })
 
+
+$("#up_button").click(function(){
+    $(".drone").each(function(){
+        console.log("Up");
+        patrol_in_progess = false;
+        drone_id = $(this).attr("id");
+        $.ajax({
+            url: 'up',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log(data)
+            }
+        });
+    })
+})
+
+$("#down_button").click(function(){
+    $(".drone").each(function(){
+        console.log("Down");
+        patrol_in_progess = false;
+        drone_id = $(this).attr("id");
+        $.ajax({
+            url: 'down',
+            type: 'post',
+            data: {"drone_id":drone_id},
+            success:function(data){
+                console.log(data)
+            }
+        });
+    })
+})
+
+
+
 $("#reset_button").click(function(){
     $(".drone").each(function(){
         console.log("Reseting drones position");
         patrol_in_progess = false;
         drone_id = $(this).attr("id");
+        move_sprite_to_zone(drone_id,"home_base");
         $.ajax({
             url: 'reset_position',
             type: 'post',
@@ -516,3 +601,29 @@ for (i = 0; i < dropdown.length; i++) {
   }
   });
 }
+
+
+
+
+$(document).on('keydown',function(e){
+    console.log(e.key);
+    $.ajax({
+        url: "keydown",
+        type: 'post',
+        data: {"drone_id":ACTIVE_DRONE,"key":e.key},
+        success:function(data){
+            console.log(data)
+        }
+    });
+})
+
+$(document).on('keyup',function(e){
+    $.ajax({
+        url: "keyup",
+        type: 'post',
+        data: {"drone_id":ACTIVE_DRONE,"key":e.key},
+        success:function(data){
+            console.log(data)
+        }
+    });
+})
