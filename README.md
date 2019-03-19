@@ -136,6 +136,7 @@ Default control keys are the following (using azerty keyboard):
 - "takeoff" : 'Tab'
 - "land" : 'Backspace'
 
+
 You can change the control keys in the settings file.
 
 <hr>
