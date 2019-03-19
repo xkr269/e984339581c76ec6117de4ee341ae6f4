@@ -516,11 +516,6 @@ $( document ).ready(function() {
     var hb_height = hb.height() / hb.parent().height() * 100;
     var hb_width = hb.width() / hb.parent().width() * 100;
     console.log(hb_top + " : " + hb_left + " : " + hb_height  + " : " +  hb_width )
-/*    $(".drone").each(function(){
-        $(this).css({top: hb_top + "%",
-                     left: hb_left  + "%",
-                     position: 'absolute'});
-        });*/
 
     $("#drone_1").css({top: "45%",
                  left: "45%",
@@ -537,7 +532,6 @@ $( document ).ready(function() {
 
 
 
-
     // Hide drones UIs
     $(".drone_ui").each(function(){if($(this).attr("id") != "drone_1_ui"){$(this).hide();}});
     $(".drone").each(function(){$(this).hide();});
@@ -550,6 +544,9 @@ $( document ).ready(function() {
     }else{
         $("#processed_tick").show();
     }
+    
+    // update connection status
+    update_connection_status();
 });
 
 
