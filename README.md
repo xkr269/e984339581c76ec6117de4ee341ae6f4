@@ -120,20 +120,21 @@ Zones
 python pilot.py drone_N (ie. python pilot.py drone_1)
 
 
+<hr>
 <h3> Interactive piloting </h3>
 You can remote control the drone using the keyboard.
 Default control keys are the following (using azerty keyboard):
-"forward" : 'z',
-"backward" : 's',
-"left" : 'q',
-"right" : 'd',
-"up" : 'ArrowUp',
-"down" : 'ArrowDown',
-"clockwise" : 'ArrowRight',
-"counter_clockwise" : 'ArrowLeft',
-"flip" : 'f',
-"takeoff" : 'Tab',
-"land" : 'Backspace'
+- "forward" : 'z'
+- "backward" : 's'
+- "left" : 'q'
+- "right" : 'd'
+- "up" : 'ArrowUp'
+- "down" : 'ArrowDown'
+- "clockwise" : 'ArrowRight'
+- "counter_clockwise" : 'ArrowLeft'
+- "flip" : 'f'
+- "takeoff" : 'Tab'
+- "land" : 'Backspace'
 
 You can change the control keys in the settings file.
 
