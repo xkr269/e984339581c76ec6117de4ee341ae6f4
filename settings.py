@@ -76,6 +76,20 @@ ALLOWED_LAG = 2 # Allowed lag between real time events and processed events
 OFFSET_RESET_MODE = 'latest' # latest for running the demo, earliest can be used for replaying existing streams
 DISPLAY_STREAM_NAME = "processed" # source or processed- which default stream is displayed in the UI
 
+# Drone control keys
+controls = {
+    'z' : "forward",
+    's' : "backward",
+    'q' : "left",
+    'd' : "right",
+    'ArrowUp' : "up",
+    'ArrowDown' : "down",
+    'ArrowRight' : "clockwise",
+    'ArrowLeft' : "counter_clockwise",
+    'f' : "flip",
+    'Tab' : "takeoff",
+    'Backspace' : "land" 
+}
 
 
 

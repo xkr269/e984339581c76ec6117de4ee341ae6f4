@@ -187,25 +187,29 @@ def reset_position():
 
 # Live instructions
 
-allowed_keys = ['q','d','z','s','f','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Backspace','Tab']
+controls = settings.controls
 pressed_keys = []
 
 @app.route('/keydown',methods=["POST"])
 def keydown():
   key = request.form['key']
-  if key in allowed_keys and key not in pressed_keys:
-    pressed_keys.append(key)
-    doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
-    controls_table.insert_or_replace(doc)
+  if key in controls :
+    command = controls[key]
+    if command not in pressed_keys:
+      pressed_keys.append(controls[key])
+      doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
+      controls_table.insert_or_replace(doc)
   return json.dumps(pressed_keys)
 
 @app.route('/keyup',methods=["POST"])
 def keyup():
   key = request.form['key']
-  if key in allowed_keys:
-    pressed_keys.remove(key)
-    doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
-    controls_table.insert_or_replace(doc)
+  if key in controls:
+    command = controls[key]
+    if command in pressed_keys:
+      pressed_keys.remove(command)
+      doc = {"_id":request.form["drone_id"],"pressed_keys":pressed_keys}
+      controls_table.insert_or_replace(doc)
   return json.dumps(pressed_keys)
 
 

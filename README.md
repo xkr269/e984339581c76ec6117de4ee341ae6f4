@@ -114,8 +114,28 @@ These zones have to be created before running the demo :
 - Access the zone editor : {{cluster_ip}}/edit
 - Create and position the zones for the drones
 
+Zones
+
 5-3/ Connect each edge VM to a drone and launch the pilot
 python pilot.py drone_N (ie. python pilot.py drone_1)
+
+
+<h3> Interactive piloting </h3>
+You can remote control the drone using the keyboard.
+Default control keys are the following (using azerty keyboard):
+"forward" : 'z',
+"backward" : 's',
+"left" : 'q',
+"right" : 'd',
+"up" : 'ArrowUp',
+"down" : 'ArrowDown',
+"clockwise" : 'ArrowRight',
+"counter_clockwise" : 'ArrowLeft',
+"flip" : 'f',
+"takeoff" : 'Tab',
+"land" : 'Backspace'
+
+You can change the control keys in the settings file.
 
 <hr>
 the clean.sh script is recommended to run if you have to relaunch the script.

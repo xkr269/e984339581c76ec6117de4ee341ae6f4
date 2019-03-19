@@ -167,18 +167,17 @@ check_stream(POSITIONS_STREAM)
 # Function polls an instruction DB to get the current control keys and send the commands to the drone
 
 controls = {
-    'q': lambda drone, speed: drone.left(speed),
-    'd': lambda drone, speed: drone.right(speed),
-    'z': lambda drone, speed: drone.forward(speed),
-    's': lambda drone, speed: drone.backward(speed),
-    'f': lambda drone, speed: drone.flip_back(),
-    # arrow keys for fast turns and altitude adjustments
-    'ArrowLeft': lambda drone, speed: drone.counter_clockwise(speed),
-    'ArrowRight': lambda drone, speed: drone.clockwise(speed),
-    'ArrowUp': lambda drone, speed: drone.up(speed),
-    'ArrowDown': lambda drone, speed: drone.down(speed),
-    'Tab': lambda drone, speed: drone.takeoff(),
-    'Backspace': lambda drone, speed: drone.land(),
+    'left': lambda drone, speed: drone.left(speed),
+    'right': lambda drone, speed: drone.right(speed),
+    'forward': lambda drone, speed: drone.forward(speed),
+    'backward': lambda drone, speed: drone.backward(speed),
+    'flip': lambda drone, speed: drone.flip_back(),
+    'clockwise': lambda drone, speed: drone.clockwise(speed),
+    'counter_clockwise': lambda drone, speed: drone.counter_clockwise(speed),
+    'up': lambda drone, speed: drone.up(speed),
+    'down': lambda drone, speed: drone.down(speed),
+    'takeoff': lambda drone, speed: drone.takeoff(),
+    'land': lambda drone, speed: drone.land(),
 }
 
 
@@ -209,22 +208,6 @@ def interactive_control(drone):
                 for key in keys_down:
                     controls[key](drone,speed)
 
-            # if pressed_keys in controls:
-            #     key_handler = controls[keyname]
-            #     if type(key_handler) == str:
-            #         getattr(drone, key_handler)(speed)
-            #     else:
-            #         key_handler(drone, speed)
-
-            # elif e.type == pygame.locals.KEYUP:
-            #     print('-' + pygame.key.name(e.key))
-            #     keyname = pygame.key.name(e.key)
-            #     if keyname in controls:
-            #         key_handler = controls[keyname]
-            #         if type(key_handler) == str:
-            #             getattr(drone, key_handler)(0)
-            #         else:
-            #             key_handler(drone, 0)
     except Exception as ex:
         logging.exception("interactive control failed")
 

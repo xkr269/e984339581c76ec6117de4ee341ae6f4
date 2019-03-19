@@ -167,38 +167,6 @@ $("#land_button").click(function(){
 })
 
 
-$("#up_button").click(function(){
-    $(".drone").each(function(){
-        console.log("Up");
-        patrol_in_progess = false;
-        drone_id = $(this).attr("id");
-        $.ajax({
-            url: 'up',
-            type: 'post',
-            data: {"drone_id":drone_id},
-            success:function(data){
-                console.log(data)
-            }
-        });
-    })
-})
-
-$("#down_button").click(function(){
-    $(".drone").each(function(){
-        console.log("Down");
-        patrol_in_progess = false;
-        drone_id = $(this).attr("id");
-        $.ajax({
-            url: 'down',
-            type: 'post',
-            data: {"drone_id":drone_id},
-            success:function(data){
-                console.log(data)
-            }
-        });
-    })
-})
-
 
 
 $("#reset_button").click(function(){
